@@ -1,2 +1,2 @@
 # ZnakovniJezik
-Prepoznavanje znakovnog jezika pomoću OpenCV bibiloioteke za C++
+Prepoznavanje znakovnog jezika pomoću OpenCV bibilioteke za C++

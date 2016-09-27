@@ -36,11 +36,11 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\Dropbox\FOI\__zavrsni\python\001\zj.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <Image Include="zj.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

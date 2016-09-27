@@ -13,7 +13,7 @@
 using namespace cv;
 using namespace std;
 
-string winName = "Znakovni jezik v.91";
+string winName = "Znakovni jezik v.93";
 HANDLE hContoursThread, hDetectThread, hStreamThread;
 Video video;
 

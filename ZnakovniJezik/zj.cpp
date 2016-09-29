@@ -3,11 +3,11 @@
 #include <string>
 #include <ctime>
 #include <windows.h>
+#include <opencv2\objdetect.hpp>
+#include <opencv2\highgui.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\video\background_segm.hpp>
 
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/background_segm.hpp"
 #include "video.h"
 
 using namespace cv;
@@ -42,8 +42,8 @@ void _detect(void *param)
 		ind = video.haarXML.find_last_of(".");
 		haarName = video.haarXML.substr(0, ind);
 
-		cvtColor(video.frame, frameGray, CV_BGR2GRAY);
-		//cvtColor(video.GetSkin(), frameGray, CV_BGR2GRAY);
+		//cvtColor(video.frame, frameGray, CV_BGR2GRAY);
+		cvtColor(video.GetSkin(), frameGray, CV_BGR2GRAY);
 		equalizeHist(frameGray, frameGray);
 		resize(frameGray, frameGray, Size((int)(video.vWidth / scaleFactor), (int)(video.vHeight / scaleFactor)));
 

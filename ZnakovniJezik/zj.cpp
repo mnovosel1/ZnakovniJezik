@@ -42,7 +42,8 @@ void _detect(void *param)
 		ind = video.haarXML.find_last_of(".");
 		haarName = video.haarXML.substr(0, ind);
 
-		cvtColor(video.GetSkin(), frameGray, CV_BGR2GRAY);
+		cvtColor(video.frame, frameGray, CV_BGR2GRAY);
+		//cvtColor(video.GetSkin(), frameGray, CV_BGR2GRAY);
 		equalizeHist(frameGray, frameGray);
 		resize(frameGray, frameGray, Size((int)(video.vWidth / scaleFactor), (int)(video.vHeight / scaleFactor)));
 

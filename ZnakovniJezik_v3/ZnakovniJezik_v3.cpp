@@ -10,10 +10,10 @@ using namespace cv;
 using namespace std;
 
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.95";
-string topText = "[ESC-izlaz] [O-overlay] [M-mask]";
+string topText = "[ESC-izlaz] [O-overlay] [M-mask]", fpsText = "fps: /";
 bool started = false, overlayed = true, masked = false;
 int ovrlyThick = 45;
-double ovrlyAlpha = 0.3;
+double fps, ovrlyAlpha = 0.5;
 Scalar ovrlyColor = cv::Scalar(60, 60, 0);
 Scalar txtColor = cv::Scalar(255, 255, 255);
 
@@ -21,11 +21,12 @@ Recognizer rc;
 Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 
 mutex m;
-thread strmThread, overlayThread, maskThread;
+thread strmThread, overlayThread, maskThread, recognizeThread;
 
 void _stream(Recognizer *obj);
 void _overlay(Recognizer *obj);
 void  _mask(Recognizer *obj);
+void  _recognize(Recognizer *obj);
 
 void setInfo(string info);
 
@@ -35,12 +36,14 @@ int main(int, char**)
 	overlayThread = thread(_overlay, &rc);
 	maskThread = thread(_mask, &rc);
 
-	setInfo("Startam..");
-	Sleep(3000);
+	setInfo("Inicijaliziram..");
+	Sleep(2000);
 
 	imshow(appNom, displayFrame);
 
 	setInfo("");
+	recognizeThread = thread(_recognize, &rc);
+
 	do
 	{
 		m.lock();
@@ -54,12 +57,12 @@ int main(int, char**)
 
 		imshow(appNom, displayFrame);
 
-		switch (waitKey(10))
+		switch (waitKey(5))
 		{
 			// ESC
 			case 27:
 				rc.stop();
-				break;
+			break;
 
 			// O
 			case 79:
@@ -76,6 +79,7 @@ int main(int, char**)
 
 	} while (rc.started);	
 
+	recognizeThread.join();
 	maskThread.join();
 	overlayThread.join();
 	strmThread.join();
@@ -97,16 +101,18 @@ void _stream(Recognizer *obj)
 {
 	Mat frame;
 	bool started = true;
+	double frameCount = 0;
+	clock_t start = clock();
 	VideoCapture cap(0);
 
 	m.lock();
-		Sleep(2000);
 		if (!cap.isOpened()) return;
 		obj->started = true;
 		obj->frame = imread("webcamfail.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 	m.unlock();
 
-	setInfo("Streaming..");
+	Sleep(250);
+	setInfo("Stream pokrenut..");
 	while (started)
 	{
 		cap.read(frame);
@@ -115,8 +121,18 @@ void _stream(Recognizer *obj)
 		{
 			m.lock();
 				obj->frame = frame;
-				started = obj->started;
+				started = obj->started;				
 			m.unlock();
+
+			frameCount += 1000;
+			
+			if (frameCount > 3000)
+			{
+				fps = (double)frameCount / (double)((clock() - start));
+				fpsText = "fps: " + to_string((int)fps);
+				frameCount = 1000;
+				start = clock();
+			}
 		}
 	}
 	return;
@@ -125,17 +141,20 @@ void _stream(Recognizer *obj)
 void _overlay(Recognizer *obj)
 {
 	Mat frame, overlayFrame;
-	bool started = true;
+	bool started = false;
 	int frameWidth;
-	int frameHeight;
-	
-	Sleep(3000);
+	int frameHeight;	
 
-	m.lock();
-		obj->frame.copyTo(frame);
-	m.unlock();
+	do
+	{
+		m.lock();
+			obj->frame.copyTo(frame);
+			started = obj->started;
+		m.unlock();
+	} while (!started);
 
-	setInfo("Overlayed..");
+	Sleep(500);
+
 	while (started)
 	{
 		frameWidth = frame.cols;
@@ -144,9 +163,10 @@ void _overlay(Recognizer *obj)
 		frame.copyTo(overlayFrame);
 
 		rectangle(overlayFrame, Point((0 - ovrlyThick * 2), (0 - ovrlyThick)), Point((frameWidth + ovrlyThick * 2), frameHeight), ovrlyColor, ovrlyThick * 3, 8);
-		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 		addWeighted(frame, ovrlyAlpha, overlayFrame, 1 - ovrlyAlpha, 0, overlayFrame);
+		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, fpsText, Point(frameWidth - 70, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
 		m.lock();
 			overlayFrame.copyTo(obj->overlyFrame);
@@ -163,15 +183,18 @@ void _overlay(Recognizer *obj)
 void  _mask(Recognizer *obj)
 {
 	Mat frame, maskedFrame;
-	bool started = true;
+	bool started = false;
 
-	Sleep(3000);
+	do
+	{
+		m.lock();
+			obj->frame.copyTo(frame);
+			started = obj->started;
+		m.unlock();
+	} while (!started);
 
-	m.lock();
-		obj->frame.copyTo(frame);
-	m.unlock();
+	Sleep(750);
 
-	setInfo("Masked..");
 	while (started)
 	{
 		cvtColor(frame, maskedFrame, COLOR_BGR2GRAY);
@@ -185,4 +208,44 @@ void  _mask(Recognizer *obj)
 			started = obj->started;
 		m.unlock();
 	}
+}
+
+void  _recognize(Recognizer *obj)
+{
+	string haarXML, haarName;
+	bool started = true;
+
+	WIN32_FIND_DATA data;
+	HANDLE hFind;
+
+	do {
+		m.lock();
+			started = obj->started;
+		m.unlock();
+	} while (!started);
+
+	do
+	{
+		hFind = FindFirstFile("haarcascades/*.*", &data);
+		do {
+			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			{
+				haarXML = data.cFileName;
+				size_t lastindex = haarXML.find_last_of(".");
+				haarName = haarXML.substr(0, lastindex);
+				setInfo(haarName);
+				Sleep(100);
+			}
+		} while (FindNextFile(hFind, &data));
+		
+
+		m.lock();
+			started = obj->started;
+		m.unlock();
+
+	} while (started);
+
+	FindClose(hFind);
+
+	return;
 }

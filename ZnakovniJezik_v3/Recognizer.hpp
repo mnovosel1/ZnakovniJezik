@@ -2,11 +2,9 @@
 class Recognizer
 {
 public:
-	cv::Mat frame, overlyFrame, maskedFrame;
+	cv::Mat frame, overlyFrame, maskedFrame, contourFrame;
 	bool started;
-	int ovrlyThick;
-	double ovrlyAlpha;
-	cv::Scalar ovrlyColor, txtColor;
+	int fps, nrContours, nrObjects;
 
 public:
 	Recognizer();

@@ -12,9 +12,9 @@ using namespace std;
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.95";
 string topText = "[ESC-izlaz] [O-overlay] [M-mask]";
 
-bool started = false, overlayed = true, masked = false;
+bool started = false, overlayed = true, masked = true;
 
-int ovrlyThick = 45, contourThresh = 25, minContourArea = 750;
+int ovrlyThick = 45, contourThresh = 25, minContourArea = 750, minHsv = 40, maxHsv = 180;
 double ovrlyAlpha = 0.5;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -161,6 +161,7 @@ void _stream(Recognizer *obj)
 			m.unlock();
 		}
 	}
+	cap.release();
 	return;
 }
 
@@ -195,7 +196,7 @@ void  _mask(Recognizer *obj)
 			for (int j = 0; j < frame.cols; j++) {
 				Vec3f pix_hsv = frameHSV.ptr<Vec3f>(i)[j];
 
-				if ((pix_hsv.val[0] < 30) || (pix_hsv.val[0] > 200))
+				if ((pix_hsv.val[0] < minHsv) || (pix_hsv.val[0] > maxHsv))
 					maskedFrame.ptr<Vec3b>(i)[j] = cwhite;
 				else
 					maskedFrame.ptr<Vec3b>(i)[j] = cblack;
@@ -303,10 +304,10 @@ void _contours(Recognizer *obj)
 		}
 
 		m.lock();
-		drawing.copyTo(obj->contourFrame);
-		obj->nrContours = nrContours;
-		obj->maskedFrame.copyTo(frame);
-		started = obj->started;
+			drawing.copyTo(obj->contourFrame);
+			obj->nrContours = nrContours;
+			obj->maskedFrame.copyTo(frame);
+			started = obj->started;
 		m.unlock();
 
 	} while (started);
@@ -349,7 +350,7 @@ void  _recognize(Recognizer *obj)
 				if (hands.size() > 0)
 				{
 					nrObjects++;
-					setInfo( to_string(hands.size()) + " : " + haarName);
+					setInfo(haarName + " : " + to_string(hands.size()));
 				}
 			}
 		} while (FindNextFile(hFind, &data));

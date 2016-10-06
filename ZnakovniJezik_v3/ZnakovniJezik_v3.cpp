@@ -33,17 +33,30 @@ void setInfo(string info);
 int main(int, char**)
 {
 	strmThread = thread(_stream, &rc);
-	overlayThread = thread(_overlay, &rc);
+	Sleep(500);
+
+	do 	{
+		Sleep(50);
+		m.lock();
+			started = rc.started;
+		m.unlock();
+	} while (!started);
+	setInfo("Streamer pokrenut..");
+
+	Sleep(200);
 	maskThread = thread(_mask, &rc);
+	setInfo("Masker pokrenut..");
 
-	setInfo("Inicijaliziram..");
-	Sleep(2000);
-
-	imshow(appNom, displayFrame);
-
-	setInfo("");
+	Sleep(200);
 	recognizeThread = thread(_recognize, &rc);
+	setInfo("Recognizer pokrenut..");
 
+	Sleep(400);
+	overlayThread = thread(_overlay, &rc);
+	setInfo("Overlayer pokrenut..");
+
+	Sleep(1000);
+	setInfo("");
 	do
 	{
 		m.lock();
@@ -60,7 +73,7 @@ int main(int, char**)
 		switch (waitKey(5))
 		{
 			// ESC
-			case 27:
+			case 27:				
 				rc.stop();
 			break;
 
@@ -79,10 +92,27 @@ int main(int, char**)
 
 	} while (rc.started);	
 
+	destroyAllWindows();
+
+	setInfo("Gasim recognizer..");
 	recognizeThread.join();
+	Sleep(100);
+
+	setInfo("Gasim masker..");
 	maskThread.join();
+	Sleep(100);
+
+	setInfo("Gasim overlayer..");
 	overlayThread.join();
+	Sleep(100);
+
+	setInfo("Gasim streamer..");
 	strmThread.join();
+	Sleep(100);
+
+
+	setInfo("Gasim se..");
+	Sleep(500);
 
 	return 0;
 }
@@ -101,18 +131,16 @@ void _stream(Recognizer *obj)
 {
 	Mat frame;
 	bool started = true;
-	double frameCount = 0;
-	clock_t start = clock();
 	VideoCapture cap(0);
 
 	m.lock();
 		if (!cap.isOpened()) return;
-		obj->started = true;
 		obj->frame = imread("webcamfail.jpg", CV_LOAD_IMAGE_ANYCOLOR);
+		obj->started = true;
 	m.unlock();
 
-	Sleep(250);
-	setInfo("Stream pokrenut..");
+	Sleep(3000);
+
 	while (started)
 	{
 		cap.read(frame);
@@ -120,19 +148,9 @@ void _stream(Recognizer *obj)
 		if (!frame.empty())
 		{
 			m.lock();
-				obj->frame = frame;
+				frame.copyTo(obj->frame);
 				started = obj->started;				
 			m.unlock();
-
-			frameCount += 1000;
-			
-			if (frameCount > 3000)
-			{
-				fps = (double)frameCount / (double)((clock() - start));
-				fpsText = "fps: " + to_string((int)fps);
-				frameCount = 1000;
-				start = clock();
-			}
 		}
 	}
 	return;
@@ -143,17 +161,14 @@ void _overlay(Recognizer *obj)
 	Mat frame, overlayFrame;
 	bool started = false;
 	int frameWidth;
-	int frameHeight;	
+	int frameHeight;
 
-	do
-	{
-		m.lock();
-			obj->frame.copyTo(frame);
-			started = obj->started;
-		m.unlock();
-	} while (!started);
+	m.lock();
+		obj->frame.copyTo(frame);
+		started = obj->started;
+	m.unlock();
 
-	Sleep(500);
+	Sleep(4000);
 
 	while (started)
 	{
@@ -182,50 +197,84 @@ void _overlay(Recognizer *obj)
 
 void  _mask(Recognizer *obj)
 {
-	Mat frame, maskedFrame;
+	Mat frame, frameHSV, maskedFrame;
+
 	bool started = false;
+	double frameCount = 0;
+	clock_t start = clock();
 
-	do
-	{
-		m.lock();
-			obj->frame.copyTo(frame);
-			started = obj->started;
-		m.unlock();
-	} while (!started);
+	Vec3b cwhite = Vec3b::all(255);
+	Vec3b cblack = Vec3b::all(0);
 
-	Sleep(750);
+	m.lock();
+		obj->frame.copyTo(frame);
+		started = obj->started;
+	m.unlock();
+
 
 	while (started)
 	{
-		cvtColor(frame, maskedFrame, COLOR_BGR2GRAY);
+		maskedFrame = frame.clone();
 		GaussianBlur(maskedFrame, maskedFrame, Size(7, 7), 1.5, 1.5);
-		Canny(maskedFrame, maskedFrame, 0, 30, 3);
-		cvtColor(maskedFrame, maskedFrame, COLOR_GRAY2BGR);
+
+		maskedFrame.convertTo(frameHSV, CV_32FC3);
+		cvtColor(frameHSV, frameHSV, CV_BGR2HSV);
+		normalize(frameHSV, frameHSV, 0.0, 255.0, NORM_MINMAX, CV_32FC3);
+
+		for (int i = 0; i < frame.rows; i++) {
+			for (int j = 0; j < frame.cols; j++) {
+				Vec3f pix_hsv = frameHSV.ptr<Vec3f>(i)[j];
+
+				if ((pix_hsv.val[0] < 30) || (pix_hsv.val[0] > 200))
+					maskedFrame.ptr<Vec3b>(i)[j] = cwhite;
+				else
+					maskedFrame.ptr<Vec3b>(i)[j] = cblack;
+			}
+		}
+
+		frame.copyTo(maskedFrame, maskedFrame);
+		//cvtColor(maskedFrame, maskedFrame, COLOR_BGR2GRAY);
+		//Canny(maskedFrame, maskedFrame, 0, 30, 3);
+		//cvtColor(maskedFrame, maskedFrame, COLOR_GRAY2BGR);
 
 		m.lock();
 			maskedFrame.copyTo(obj->maskedFrame);
-			obj->frame.copyTo(frame);
+			frame = obj->frame.clone();
 			started = obj->started;
 		m.unlock();
+
+		frameCount += 1000;
+		if (frameCount > 10000)
+		{
+			fps = (double)frameCount / (double)((clock() - start));
+			fpsText = "fps: " + to_string((int)fps);
+			frameCount = 0;
+			start = clock();
+		}
 	}
+	return;
 }
 
 void  _recognize(Recognizer *obj)
 {
+	Mat frame;
 	string haarXML, haarName;
-	bool started = true;
+	CascadeClassifier cascade;
+	vector<Rect> hands;
+
+	bool started = false;
 
 	WIN32_FIND_DATA data;
 	HANDLE hFind;
 
+	Sleep(5000);
+
 	do {
 		m.lock();
+			obj->maskedFrame.copyTo(frame);
 			started = obj->started;
 		m.unlock();
-	} while (!started);
 
-	do
-	{
 		hFind = FindFirstFile("haarcascades/*.*", &data);
 		do {
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
@@ -233,19 +282,18 @@ void  _recognize(Recognizer *obj)
 				haarXML = data.cFileName;
 				size_t lastindex = haarXML.find_last_of(".");
 				haarName = haarXML.substr(0, lastindex);
-				setInfo(haarName);
-				Sleep(100);
+
+				cascade.load("haarcascades/" + haarXML);
+				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(100, 100), Size(300, 300));
+
+				if (hands.size() > 0)
+				{
+					setInfo( to_string(hands.size()) + " : " + haarName);
+				}
 			}
 		} while (FindNextFile(hFind, &data));
-		
-
-		m.lock();
-			started = obj->started;
-		m.unlock();
-
 	} while (started);
 
 	FindClose(hFind);
-
 	return;
 }

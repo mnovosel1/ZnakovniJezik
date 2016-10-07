@@ -12,9 +12,9 @@ using namespace std;
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.95";
 string topText = "[ESC-izlaz] [O-overlay] [M-mask]";
 
-bool started = false, overlayed = true, masked = true;
+bool started = false, overlayed = true, masked = false;
 
-int ovrlyThick = 45, contourThresh = 25, minContourArea = 750, minHsv = 40, maxHsv = 180;
+int ovrlyThick = 45, contourThresh = 20, minContourArea = 1000, maxNrContours = 1, minHsv = 20, maxHsv = 180;
 double ovrlyAlpha = 0.5;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -65,6 +65,14 @@ int main(int, char**)
 
 	Sleep(1000);
 	setInfo("");
+
+	namedWindow("ZJ postavke", CV_WINDOW_AUTOSIZE);
+	createTrackbar("Hsv min.", "ZJ postavke", &minHsv, 75, NULL);
+	createTrackbar("Hsv max.", "ZJ postavke", &maxHsv, 255, NULL);
+	createTrackbar("C. thr.", "ZJ postavke", &contourThresh, 80, NULL);
+	createTrackbar("C. min. ar.", "ZJ postavke", &minContourArea, 15000, NULL);
+	createTrackbar("C. min.", "ZJ postavke", &maxNrContours, 20, NULL);
+
 	do
 	{
 		m.lock();
@@ -122,7 +130,7 @@ int main(int, char**)
 	strmThread.join();
 	Sleep(100);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 void setInfo(string info)
@@ -174,18 +182,21 @@ void  _mask(Recognizer *obj)
 	clock_t start = clock();
 	int fps = 0;
 
+	vector<vector<Point>> contours;
+
 	Vec3b cwhite = Vec3b::all(255);
 	Vec3b cblack = Vec3b::all(0);
 
 	m.lock();
 		obj->frame.copyTo(frame);
+		contours = obj->contours;
 		started = obj->started;
 	m.unlock();
 
 
 	while (started)
 	{
-		maskedFrame = frame.clone();
+		frame.copyTo(maskedFrame);
 		GaussianBlur(maskedFrame, maskedFrame, Size(7, 7), 1.5, 1.5);
 
 		maskedFrame.convertTo(frameHSV, CV_32FC3);
@@ -200,20 +211,19 @@ void  _mask(Recognizer *obj)
 					maskedFrame.ptr<Vec3b>(i)[j] = cwhite;
 				else
 					maskedFrame.ptr<Vec3b>(i)[j] = cblack;
+
 			}
 		}
 
 		frame.copyTo(maskedFrame, maskedFrame);
-		//cvtColor(maskedFrame, maskedFrame, COLOR_BGR2GRAY);
+		/*
+		for (int i = 0; i < contours.size(); i++)
+		{
+			drawContours(maskedFrame, contours, i, contourColor);
+		}
+		*/
 		//Canny(maskedFrame, maskedFrame, 0, 30, 3);
-		//cvtColor(maskedFrame, maskedFrame, COLOR_GRAY2BGR);
-
-		m.lock();
-			maskedFrame.copyTo(obj->maskedFrame);
-			frame = obj->frame.clone();
-			started = obj->started;
-			obj->fps = fps;
-		m.unlock();
+		//cvtColor(subtractedFrame, subtractedFrame, COLOR_GRAY2BGR);
 
 		frameCount += 1000;
 		if (frameCount > 10000)
@@ -222,6 +232,14 @@ void  _mask(Recognizer *obj)
 			frameCount = 0;
 			start = clock();
 		}
+
+		m.lock();
+			maskedFrame.copyTo(obj->maskedFrame);
+			obj->frame.copyTo(frame);
+			obj->fps = fps;
+			contours = obj->contours;
+			started = obj->started;
+		m.unlock();
 	}
 	return;
 }
@@ -233,8 +251,8 @@ void _overlay(Recognizer *obj)
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0;
 
 	m.lock();
-	obj->frame.copyTo(frame);
-	started = obj->started;
+		obj->frame.copyTo(frame);
+		started = obj->started;
 	m.unlock();
 
 	Sleep(4000);
@@ -249,9 +267,9 @@ void _overlay(Recognizer *obj)
 		rectangle(overlayFrame, Point((0 - ovrlyThick * 2), (0 - ovrlyThick)), Point((frameWidth + ovrlyThick * 2), frameHeight), ovrlyColor, ovrlyThick * 3, 8);
 		addWeighted(frame, ovrlyAlpha, overlayFrame, 1 - ovrlyAlpha, 0, overlayFrame);
 		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 70, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 100, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 95, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
 		m.lock();
@@ -264,7 +282,7 @@ void _overlay(Recognizer *obj)
 
 			started = obj->started;
 			nrObjects = obj->nrObjects;
-			nrContours = obj->nrContours;
+			nrContours = obj->contours.size();
 			fps = obj->fps;
 		m.unlock();
 	}
@@ -274,43 +292,44 @@ void _overlay(Recognizer *obj)
 void _contours(Recognizer *obj)
 {
 	Mat frame, canny_output;
-	vector<vector<Point>> contours;
+	vector<vector<Point>> contours, bigContours;
 	vector<Vec4i> hierarchy;
 
 	bool started = true;
 
-	Sleep(250);
-
 	m.lock();
-	obj->maskedFrame.copyTo(frame);
+		obj->maskedFrame.copyTo(frame);
 	m.unlock();
 
-	do {
-		cvtColor(frame, frame, CV_BGR2GRAY);
+	do
+	{
+		cvtColor(frame, frame, COLOR_BGR2GRAY);
+		threshold(frame, canny_output, contourThresh, 50, 0);
 
-		Canny(frame, canny_output, contourThresh, contourThresh * 2, 3);
-		findContours(canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+		//Canny(canny_output, canny_output, contourThresh, contourThresh * 2, 3);
+		findContours(canny_output, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-		Mat drawing = Mat::zeros(canny_output.size(), CV_8UC3);
-
-		int nrContours = 0;
+		bigContours.clear();
 		for (int i = 0; i < contours.size(); i++)
 		{
 			if (contourArea(contours[i]) > minContourArea)
 			{
-				drawContours(drawing, contours, i, contourColor, 1, 8, hierarchy, 0, Point());
-				nrContours++;
+				//bigContours.push_back(contours[i]);
+				m.lock();
+					drawContours(obj->frame, contours, i, contourColor);
+				m.unlock();
 			}
 		}
 
 		m.lock();
-			drawing.copyTo(obj->contourFrame);
-			obj->nrContours = nrContours;
+			//obj->contours.clear();
+			//obj->contours = bigContours;
 			obj->maskedFrame.copyTo(frame);
 			started = obj->started;
 		m.unlock();
 
 	} while (started);
+	return;
 }
 
 void  _recognize(Recognizer *obj)
@@ -329,13 +348,14 @@ void  _recognize(Recognizer *obj)
 	Sleep(5000);
 
 	do {
+		nrObjects = 0;
+
 		m.lock();
 			obj->maskedFrame.copyTo(frame);
 			started = obj->started;
 			obj->nrObjects = nrObjects;
 		m.unlock();
 
-		nrObjects = 0;
 		hFind = FindFirstFile("haarcascades/*.*", &data);
 		do {
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
@@ -345,12 +365,13 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, lastindex);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(100, 100), Size(300, 300));
+				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(150, 150), Size(700, 700));
 
 				if (hands.size() > 0)
 				{
 					nrObjects++;
 					setInfo(haarName + " : " + to_string(hands.size()));
+					Sleep(50);
 				}
 			}
 		} while (FindNextFile(hFind, &data));

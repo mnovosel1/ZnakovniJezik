@@ -2,7 +2,7 @@
 class Recognizer
 {
 public:
-	cv::Mat frame, overlyFrame, maskedFrame;
+	cv::Mat frame, overlyFrame, maskedFrame, contouredFrame;
 	std::vector<std::vector<cv::Point>> contours;
 	bool started;
 	int fps, nrObjects;

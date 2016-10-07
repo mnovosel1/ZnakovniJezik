@@ -10,11 +10,11 @@ using namespace cv;
 using namespace std;
 
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.95";
-string topText = "[ESC-izlaz] [O-overlay] [M-mask]";
+string topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
 
-bool started = false, overlayed = true, masked = false;
+bool started = false, overlayed = true, masked = false, postavke = false;
 
-int ovrlyThick = 45, contourThresh = 20, minContourArea = 1000, maxNrContours = 1, minHsv = 20, maxHsv = 180;
+int ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 20, maxHsv = 180;
 double ovrlyAlpha = 0.5;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -66,13 +66,6 @@ int main(int, char**)
 	Sleep(1000);
 	setInfo("");
 
-	namedWindow("ZJ postavke", CV_WINDOW_AUTOSIZE);
-	createTrackbar("Hsv min.", "ZJ postavke", &minHsv, 75, NULL);
-	createTrackbar("Hsv max.", "ZJ postavke", &maxHsv, 255, NULL);
-	createTrackbar("C. thr.", "ZJ postavke", &contourThresh, 200, NULL);
-	createTrackbar("C. min. ar.", "ZJ postavke", &minContourArea, 15000, NULL);
-	createTrackbar("C. min.", "ZJ postavke", &maxNrContours, 20, NULL);
-
 	do
 	{
 		m.lock();
@@ -81,7 +74,7 @@ int main(int, char**)
 			else if (masked)
 				rc.maskedFrame.copyTo(displayFrame);
 			else
-				rc.frame.copyTo(displayFrame);
+				rc.contouredFrame.copyTo(displayFrame);
 		m.unlock();
 
 		imshow(appNom, displayFrame);
@@ -104,7 +97,29 @@ int main(int, char**)
 			case 109:
 				masked = !masked;
 			break;
+
+			// P
+			case 80:
+			case 112:
+				postavke = !postavke;
+
+				if (postavke)
+				{
+					namedWindow("Postavke", CV_WINDOW_AUTOSIZE);
+					createTrackbar("Hsv min.", "Postavke", &minHsv, 75, NULL);
+					createTrackbar("Hsv max.", "Postavke", &maxHsv, 255, NULL);
+					createTrackbar("C. thr.", "Postavke", &contourThresh, 200, NULL);
+					createTrackbar("C. min. ar.", "Postavke", &minContourArea, 50000, NULL);
+					createTrackbar("C. min.", "Postavke", &maxNrContours, 20, NULL);
+				}
+				else
+				{
+					destroyWindow("Postavke");
+				}
+
+			break;
 		}
+
 
 	} while (rc.started);	
 
@@ -165,6 +180,7 @@ void _stream(Recognizer *obj)
 		{
 			m.lock();
 				frame.copyTo(obj->frame);
+				frame.copyTo(obj->contouredFrame);
 				started = obj->started;				
 			m.unlock();
 		}
@@ -278,7 +294,7 @@ void _overlay(Recognizer *obj)
 			if (masked)
 				obj->maskedFrame.copyTo(frame);
 			else
-				obj->frame.copyTo(frame);
+				obj->contouredFrame.copyTo(frame);
 
 			started = obj->started;
 			nrObjects = obj->nrObjects;
@@ -316,14 +332,12 @@ void _contours(Recognizer *obj)
 			{
 				//bigContours.push_back(contours[i]);
 				m.lock();
-					drawContours(obj->frame, contours, i, contourColor);
+					drawContours(obj->contouredFrame, contours, i, contourColor);
 				m.unlock();
 			}
 		}
 
 		m.lock();
-			//obj->contours.clear();
-			//obj->contours = bigContours;
 			obj->maskedFrame.copyTo(frame);
 			started = obj->started;
 		m.unlock();

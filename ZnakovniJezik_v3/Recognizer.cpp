@@ -16,6 +16,7 @@ void Recognizer::start()
 {
 	frame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 	maskedFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
+	contouredFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 	overlyFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 }
 

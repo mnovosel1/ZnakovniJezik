@@ -69,7 +69,7 @@ int main(int, char**)
 	namedWindow("ZJ postavke", CV_WINDOW_AUTOSIZE);
 	createTrackbar("Hsv min.", "ZJ postavke", &minHsv, 75, NULL);
 	createTrackbar("Hsv max.", "ZJ postavke", &maxHsv, 255, NULL);
-	createTrackbar("C. thr.", "ZJ postavke", &contourThresh, 80, NULL);
+	createTrackbar("C. thr.", "ZJ postavke", &contourThresh, 200, NULL);
 	createTrackbar("C. min. ar.", "ZJ postavke", &minContourArea, 15000, NULL);
 	createTrackbar("C. min.", "ZJ postavke", &maxNrContours, 20, NULL);
 

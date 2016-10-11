@@ -9,7 +9,7 @@
 using namespace cv;
 using namespace std;
 
-string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.95";
+string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.98";
 string topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
 
 bool started = false, overlayed = true, masked = false, postavke = false;

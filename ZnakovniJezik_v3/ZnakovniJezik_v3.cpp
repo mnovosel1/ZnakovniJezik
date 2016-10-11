@@ -14,7 +14,7 @@ string topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
 
 bool started = false, overlayed = true, masked = false, postavke = false;
 
-int ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 20, maxHsv = 180;
+int ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
 double ovrlyAlpha = 0.5;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -27,16 +27,17 @@ mutex m;
 thread strmThread, maskThread, overlayThread, contourThread, recognizeThread;
 
 void _stream(Recognizer *obj);
-void  _mask(Recognizer *obj);
+void _mask(Recognizer *obj);
 void _overlay(Recognizer *obj);
 void _contours(Recognizer *obj);
-void  _recognize(Recognizer *obj);
+void _recognize(Recognizer *obj);
 
 void setInfo(string info);
 
 int main(int, char**)
 {
 	strmThread = thread(_stream, &rc);
+	setInfo("\n");
 	Sleep(400);
 
 	do 	{
@@ -45,25 +46,26 @@ int main(int, char**)
 			started = rc.started;
 		m.unlock();
 	} while (!started);
-	setInfo("Streamer pokrenut..");
+	setInfo("Streamer pokrenut..\n");
 
 	Sleep(200);
 	maskThread = thread(_mask, &rc);
-	setInfo("Masker pokrenut..");
+	setInfo("Masker pokrenut..\n");
 
 	Sleep(300);
 	overlayThread = thread(_overlay, &rc);
-	setInfo("Overlayer pokrenut..");
+	setInfo("Overlayer pokrenut..\n");
 
 	Sleep(400);
 	contourThread = thread(_contours, &rc);
-	setInfo("Contourer pokrenut..");
+	setInfo("Contourer pokrenut..\n");
 
 	Sleep(500);
 	recognizeThread = thread(_recognize, &rc);
-	setInfo("Recognizer pokrenut..");
+	setInfo("Recognizer pokrenut..\n");
 
 	Sleep(1000);
+	setInfo("\n\nprepoznao:\n");
 	setInfo("");
 
 	do
@@ -106,7 +108,8 @@ int main(int, char**)
 				if (postavke)
 				{
 					namedWindow("Postavke", CV_WINDOW_AUTOSIZE);
-					createTrackbar("Hsv min.", "Postavke", &minHsv, 75, NULL);
+					createTrackbar("Blur", "Postavke", &blurKernel, 150, NULL);
+					createTrackbar("Hsv min.", "Postavke", &minHsv, 255, NULL);
 					createTrackbar("Hsv max.", "Postavke", &maxHsv, 255, NULL);
 					createTrackbar("C. thr.", "Postavke", &contourThresh, 200, NULL);
 					createTrackbar("C. min. ar.", "Postavke", &minContourArea, 50000, NULL);
@@ -123,25 +126,26 @@ int main(int, char**)
 
 	} while (rc.started);	
 
+	setInfo("\n\n\n");
 	destroyAllWindows();
 
-	setInfo("Gasim recognizer..");
+	setInfo("Gasim recognizer..\n");
 	recognizeThread.join();
 	Sleep(100);
 
-	setInfo("Gasim contourer..");
+	setInfo("Gasim contourer..\n");
 	contourThread.join();
 	Sleep(100);
 
-	setInfo("Gasim overlayer..");
+	setInfo("Gasim overlayer..\n");
 	overlayThread.join();
 	Sleep(100);
 
-	setInfo("Gasim masker..");
+	setInfo("Gasim masker..\n");
 	maskThread.join();
 	Sleep(100);
 
-	setInfo("Gasim streamer..");
+	setInfo("Gasim streamer..\n");
 	strmThread.join();
 	Sleep(100);
 
@@ -152,8 +156,8 @@ void setInfo(string info)
 {
 	infoText = info;
 
-	if ( infoText != oldinfoText )
-		cout << infoText << endl;
+	if ( infoText != "" && infoText != oldinfoText )
+		cout << infoText;
 
 	oldinfoText = infoText;
 }
@@ -213,7 +217,9 @@ void  _mask(Recognizer *obj)
 	while (started)
 	{
 		frame.copyTo(maskedFrame);
-		GaussianBlur(maskedFrame, maskedFrame, Size(7, 7), 1.5, 1.5);
+		//GaussianBlur(maskedFrame, maskedFrame, Size(blurKernel, blurKernel), 0, 0);
+		blurKernel = blurKernel < 2 ? 2 : blurKernel;
+		blur(maskedFrame, maskedFrame, Size(blurKernel, blurKernel));
 
 		maskedFrame.convertTo(frameHSV, CV_32FC3);
 		cvtColor(frameHSV, frameHSV, CV_BGR2HSV);
@@ -251,6 +257,7 @@ void  _mask(Recognizer *obj)
 
 		m.lock();
 			maskedFrame.copyTo(obj->maskedFrame);
+			maskedFrame.copyTo(obj->contouredMaskedFrame);
 			obj->frame.copyTo(frame);
 			obj->fps = fps;
 			contours = obj->contours;
@@ -292,7 +299,7 @@ void _overlay(Recognizer *obj)
 			overlayFrame.copyTo(obj->overlyFrame);
 
 			if (masked)
-				obj->maskedFrame.copyTo(frame);
+				obj->contouredMaskedFrame.copyTo(frame);
 			else
 				obj->contouredFrame.copyTo(frame);
 
@@ -332,6 +339,7 @@ void _contours(Recognizer *obj)
 			{
 				//bigContours.push_back(contours[i]);
 				m.lock();
+					drawContours(obj->contouredMaskedFrame, contours, i, contourColor);
 					drawContours(obj->contouredFrame, contours, i, contourColor);
 				m.unlock();
 			}
@@ -384,11 +392,15 @@ void  _recognize(Recognizer *obj)
 				if (hands.size() > 0)
 				{
 					nrObjects++;
-					setInfo(haarName + " : " + to_string(hands.size()));
+					setInfo(haarName + " ");
 					Sleep(50);
 				}
 			}
 		} while (FindNextFile(hFind, &data));
+
+		Sleep(1000);
+		setInfo("");
+
 	} while (started);
 
 	FindClose(hFind);

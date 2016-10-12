@@ -10,11 +10,11 @@ using namespace cv;
 using namespace std;
 
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.98";
-string topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
+string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
 
 bool started = false, overlayed = true, masked = false, postavke = false;
 
-int ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
 double ovrlyAlpha = 0.5;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -86,6 +86,14 @@ int main(int, char**)
 			// ESC
 			case 27:				
 				rc.stop();
+			break;
+
+			// C capture
+			case 67:
+			case 99:
+				slikaIme = to_string(++brSlike);
+				imwrite("img/" + slikaIme.substr(1, 6) + ".jpg", rc.frame);
+				setInfo("\nspremio: " + slikaIme.substr(1, 6) + ".jpg\n");
 			break;
 
 			// O

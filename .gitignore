@@ -8,6 +8,7 @@
 *.sln.docstates
 *.tlog
 *.iss
+ZnakovniJezik_v3.exe
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

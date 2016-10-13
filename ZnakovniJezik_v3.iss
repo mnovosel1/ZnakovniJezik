@@ -32,6 +32,9 @@ Name: "croatian"; MessagesFile: "compiler:Languages/Croatian.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[Dirs]
+Name: "{app}\img"
+
 [Files]
 Source: "Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb, ZnakovniJezik.bmp, ZnakovniJezik.ico"
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files

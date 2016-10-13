@@ -10,7 +10,7 @@ using namespace cv;
 using namespace std;
 
 string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.98";
-string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke]";
+string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-capture]";
 
 bool started = false, overlayed = true, masked = false, postavke = false;
 
@@ -93,8 +93,10 @@ int main(int, char**)
 			case 99:
 				slikaIme = to_string(++brSlike);
 				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = ExePath() + "\\img\\" + slikaIme + ".jpg";
+				slikaIme = ExePath() + "\\img\\" + slikaIme + ".bmp";
+
 				imwrite(slikaIme, rc.frame);
+
 				setInfo(slikaIme + "\n", 1);
 			break;
 

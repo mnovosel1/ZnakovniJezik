@@ -7,7 +7,7 @@
 *.userosscache
 *.sln.docstates
 *.tlog
-#*.iss
+*.iss
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -15,7 +15,7 @@
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
-[Rr]eleases/
+#[Rr]eleases/
 ZnakovniJezik/Release/
 ZnakovniJezik/Debug/
 x64/

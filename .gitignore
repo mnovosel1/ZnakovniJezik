@@ -8,14 +8,13 @@
 *.sln.docstates
 *.tlog
 *.iss
-ZnakovniJezik_v3.exe
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
 # Build results
-#[Dd]ebug/
-[Dd]ebugPublic/
+ZnakovniJezik_v3/[Dd]ebug/
+[Dd]ebugPublic/ZnakovniJezik_v3.exe
 #[Rr]eleases/
 ZnakovniJezik/Release/
 ZnakovniJezik/Debug/

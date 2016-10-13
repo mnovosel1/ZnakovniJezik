@@ -14,7 +14,7 @@
 
 # Build results
 ZnakovniJezik_v3/[Dd]ebug/
-[Dd]ebugPublic/ZnakovniJezik_v3.exe
+[Dd]ebug/ZnakovniJezik_v3.exe
 #[Rr]eleases/
 ZnakovniJezik/Release/
 ZnakovniJezik/Debug/

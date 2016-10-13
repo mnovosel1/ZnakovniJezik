@@ -93,7 +93,7 @@ int main(int, char**)
 			case 99:
 				slikaIme = to_string(++brSlike);
 				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = ExePath() + "\\img\\" + slikaIme + ".bmp";
+				slikaIme = ExePath() + "\\img\\" + slikaIme + ".jpg";
 
 				imwrite(slikaIme, rc.frame);
 

@@ -32,12 +32,13 @@ void _overlay(Recognizer *obj);
 void _contours(Recognizer *obj);
 void _recognize(Recognizer *obj);
 
-void setInfo(string info);
+string ExePath();
+void setInfo(string info, int what = 0);
 
 int main(int, char**)
 {
 	strmThread = thread(_stream, &rc);
-	setInfo("\n");
+	setInfo("\n", 1);
 	Sleep(400);
 
 	do 	{
@@ -46,26 +47,25 @@ int main(int, char**)
 			started = rc.started;
 		m.unlock();
 	} while (!started);
-	setInfo("Streamer pokrenut..\n");
+	setInfo("Streamer pokrenut..\n", 1);
 
 	Sleep(200);
 	maskThread = thread(_mask, &rc);
-	setInfo("Masker pokrenut..\n");
+	setInfo("Masker pokrenut..\n", 1);
 
 	Sleep(300);
 	overlayThread = thread(_overlay, &rc);
-	setInfo("Overlayer pokrenut..\n");
+	setInfo("Overlayer pokrenut..\n", 1);
 
 	Sleep(400);
 	contourThread = thread(_contours, &rc);
-	setInfo("Contourer pokrenut..\n");
+	setInfo("Contourer pokrenut..\n", 1);
 
 	Sleep(500);
 	recognizeThread = thread(_recognize, &rc);
-	setInfo("Recognizer pokrenut..\n");
+	setInfo("Recognizer pokrenut..\n", 1);
 
 	Sleep(1000);
-	setInfo("\n\nprepoznao:\n");
 	setInfo("");
 
 	do
@@ -92,8 +92,10 @@ int main(int, char**)
 			case 67:
 			case 99:
 				slikaIme = to_string(++brSlike);
-				imwrite("img/" + slikaIme.substr(1, 6) + ".jpg", rc.frame);
-				setInfo("\nspremio: " + slikaIme.substr(1, 6) + ".jpg\n");
+				slikaIme = slikaIme.substr(1, 6);
+				slikaIme = ExePath() + "\\img\\" + slikaIme + ".jpg";
+				imwrite(slikaIme, rc.frame);
+				setInfo(slikaIme + "\n", 1);
 			break;
 
 			// O
@@ -137,37 +139,44 @@ int main(int, char**)
 	setInfo("\n\n\n");
 	destroyAllWindows();
 
-	setInfo("Gasim recognizer..\n");
+	setInfo("Gasim recognizer..\n", 1);
 	recognizeThread.join();
 	Sleep(100);
 
-	setInfo("Gasim contourer..\n");
+	setInfo("Gasim contourer..\n", 1);
 	contourThread.join();
 	Sleep(100);
 
-	setInfo("Gasim overlayer..\n");
+	setInfo("Gasim overlayer..\n", 1);
 	overlayThread.join();
 	Sleep(100);
 
-	setInfo("Gasim masker..\n");
+	setInfo("Gasim masker..\n", 1);
 	maskThread.join();
 	Sleep(100);
 
-	setInfo("Gasim streamer..\n");
+	setInfo("Gasim streamer..\n", 1);
 	strmThread.join();
 	Sleep(100);
 
 	return EXIT_SUCCESS;
 }
 
-void setInfo(string info)
+void setInfo(string info, int what)
 {
-	infoText = info;
 
-	if ( infoText != "" && infoText != oldinfoText )
-		cout << infoText;
+	if (what == 0 || what == 1)
+	{
+		if (info != "" && info != oldinfoText)
+			cout << info;
+	}
 
-	oldinfoText = infoText;
+	if (what == 0 || what == 2)
+	{
+		infoText = info;
+	}
+
+	oldinfoText = info;
 }
 
 void _stream(Recognizer *obj)
@@ -406,11 +415,19 @@ void  _recognize(Recognizer *obj)
 			}
 		} while (FindNextFile(hFind, &data));
 
-		Sleep(1000);
+		Sleep(2000);
 		setInfo("");
 
 	} while (started);
 
 	FindClose(hFind);
 	return;
+}
+
+string ExePath()
+{
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, MAX_PATH);
+	string::size_type pos = string(buffer).find_last_of("\\/");
+	return string(buffer).substr(0, pos);
 }

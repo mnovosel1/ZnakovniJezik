@@ -21,7 +21,7 @@ Scalar txtColor = Scalar(255, 255, 255);
 Scalar contourColor = Scalar(0, 255, 150);
 
 Recognizer rc;
-Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
+Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR), saveFrame;
 
 mutex m;
 thread strmThread, maskThread, overlayThread, contourThread, recognizeThread;
@@ -32,7 +32,6 @@ void _overlay(Recognizer *obj);
 void _contours(Recognizer *obj);
 void _recognize(Recognizer *obj);
 
-string ExePath();
 void setInfo(string info, int what = 0);
 
 int main(int, char**)
@@ -93,9 +92,10 @@ int main(int, char**)
 			case 99:
 				slikaIme = to_string(++brSlike);
 				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = ExePath() + "\\img\\" + slikaIme + ".jpg";
-
-				imwrite(slikaIme, rc.frame);
+				slikaIme = "img\\" + slikaIme + ".jpg";
+				
+				resize(rc.frame, saveFrame, Size(80, 60));
+				imwrite(slikaIme, saveFrame);
 
 				setInfo(slikaIme + "\n", 1);
 			break;
@@ -424,12 +424,4 @@ void  _recognize(Recognizer *obj)
 
 	FindClose(hFind);
 	return;
-}
-
-string ExePath()
-{
-	char buffer[MAX_PATH];
-	GetModuleFileName(NULL, buffer, MAX_PATH);
-	string::size_type pos = string(buffer).find_last_of("\\/");
-	return string(buffer).substr(0, pos);
 }

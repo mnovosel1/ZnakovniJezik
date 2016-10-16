@@ -9,10 +9,12 @@
 using namespace cv;
 using namespace std;
 
-string infoText, oldinfoText, appNom = "Znakovni jezik v0.3.98";
+const char* appNom = "Znakovni jezik v0.3.100.5";
+
+string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-capture]";
 
-bool started = false, overlayed = true, masked = false, postavke = false;
+bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
 int brSlike = 1000000, ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
 double ovrlyAlpha = 0.5;
@@ -22,6 +24,7 @@ Scalar contourColor = Scalar(0, 255, 150);
 
 Recognizer rc;
 Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR), saveFrame;
+Point P1(0, 0), P2(0, 0);
 
 mutex m;
 thread strmThread, maskThread, overlayThread, contourThread, recognizeThread;
@@ -31,6 +34,9 @@ void _mask(Recognizer *obj);
 void _overlay(Recognizer *obj);
 void _contours(Recognizer *obj);
 void _recognize(Recognizer *obj);
+
+void onMouse(int event, int x, int y, int f, void*);
+void checkBoundary(Mat img);
 
 void setInfo(string info, int what = 0);
 
@@ -79,6 +85,7 @@ int main(int, char**)
 		m.unlock();
 
 		imshow(appNom, displayFrame);
+		setMouseCallback(appNom, onMouse, NULL);
 
 		switch (waitKey(5))
 		{
@@ -312,9 +319,13 @@ void _overlay(Recognizer *obj)
 		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "w : " + to_string(abs(P1.x - P2.x)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "h : " + to_string(abs(P1.y - P2.y)), Point(frameWidth - 100, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
+
 		m.lock();
+			rectangle(overlayFrame, rc.cropRect, Scalar(0, 255, 0), 1, 8, 0);
 			overlayFrame.copyTo(obj->overlyFrame);
 
 			if (masked)
@@ -424,4 +435,81 @@ void  _recognize(Recognizer *obj)
 
 	FindClose(hFind);
 	return;
+}
+
+void checkBoundary(Mat img)
+{
+	m.lock();
+
+	if (rc.cropRect.width>img.cols - rc.cropRect.x)
+		rc.cropRect.width = img.cols - rc.cropRect.x;
+
+	if (rc.cropRect.height>img.rows - rc.cropRect.y)
+		rc.cropRect.height = img.rows - rc.cropRect.y;
+
+	if (rc.cropRect.x<0)
+		rc.cropRect.x = 0;
+
+	if (rc.cropRect.y<0)
+		rc.cropRect.height = 0;
+
+	m.unlock();
+}
+
+void onMouse(int event, int x, int y, int f, void*)
+{
+	switch (event){
+
+	case  CV_EVENT_LBUTTONDOWN:
+		clicked = true;
+
+		P1.x = x;
+		P1.y = y;
+		P2.x = x;
+		P2.y = y;
+		break;
+
+	case  CV_EVENT_LBUTTONUP:
+		P2.x = x;
+		P2.y = y;
+		clicked = false;
+		break;
+
+	case  CV_EVENT_MOUSEMOVE:
+		if (clicked){
+			P2.x = x;
+			P2.y = y;
+		}
+		break;
+
+	default:   break;
+
+
+	}
+
+
+	if (clicked)
+	{
+		m.lock();
+
+		if (P1.x>P2.x){
+			rc.cropRect.x = P2.x;
+			rc.cropRect.width = P1.x - P2.x;
+		}
+		else {
+			rc.cropRect.x = P1.x;
+			rc.cropRect.width = P2.x - P1.x;
+		}
+
+		if (P1.y>P2.y){
+			rc.cropRect.y = P2.y;
+			rc.cropRect.height = P1.y - P2.y;
+		}
+		else {
+			rc.cropRect.y = P1.y;
+			rc.cropRect.height = P2.y - P1.y;
+		}
+
+		m.unlock();
+	}
 }

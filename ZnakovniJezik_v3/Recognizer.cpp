@@ -9,6 +9,7 @@ Recognizer::Recognizer()
 	fps = 0;
 	nrObjects = 0;
 	started = false;
+	cropRect = cv::Rect(0, 0, 0, 0);
 	start();
 }
 

@@ -21,6 +21,9 @@ void Recognizer::start()
 	maskedFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 	contouredFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
 	overlyFrame = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
+	ROI = cv::imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR);
+	cropRect.width = ROI.cols;
+	cropRect.height = ROI.rows;
 }
 
 void Recognizer::stop()

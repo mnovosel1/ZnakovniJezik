@@ -23,7 +23,7 @@ Scalar txtColor = Scalar(255, 255, 255);
 Scalar contourColor = Scalar(0, 255, 150);
 
 Recognizer rc;
-Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR), saveFrame;
+Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR), saveFrame, ROIframe;
 
 mutex m;
 thread strmThread, maskThread, overlayThread, contourThread, recognizeThread;
@@ -81,9 +81,11 @@ int main(int, char**)
 				rc.maskedFrame.copyTo(displayFrame);
 			else
 				rc.contouredFrame.copyTo(displayFrame);
+			rc.ROI.copyTo(ROIframe);
 		m.unlock();
 
 		imshow(appNom, displayFrame);
+		imshow("ROI", ROIframe);
 		setMouseCallback(appNom, onMouse, NULL);
 
 		switch (waitKey(5))
@@ -210,7 +212,13 @@ void _stream(Recognizer *obj)
 			m.lock();
 				frame.copyTo(obj->frame);
 				frame.copyTo(obj->contouredFrame);
-				started = obj->started;				
+				if (obj->cropRect.width>5 && obj->cropRect.height>5)
+					obj->ROI = frame(obj->cropRect);
+				else
+				{
+					frame.copyTo(obj->ROI);
+				}
+				started = obj->started;		
 			m.unlock();
 		}
 	}

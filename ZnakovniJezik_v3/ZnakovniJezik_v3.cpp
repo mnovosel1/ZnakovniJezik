@@ -9,7 +9,7 @@
 using namespace cv;
 using namespace std;
 
-const char* appNom = "Znakovni jezik v0.3.100.5";
+const char* appNom = "Znakovni jezik v0.3.103";
 
 string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-slikaj]";
@@ -17,7 +17,7 @@ string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-sli
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
 int brSlike = 1000000, ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
-double ovrlyAlpha = 0.5;
+double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
 Scalar contourColor = Scalar(0, 255, 150);
@@ -80,11 +80,12 @@ int main(int, char**)
 				rc.maskedFrame.copyTo(displayFrame);
 			else
 				rc.contouredFrame.copyTo(displayFrame);
-			rc.ROI.copyTo(ROIframe);
+
+			rc.maskedFrame.copyTo(ROIframe);
 		m.unlock();
 
 		imshow(appNom, displayFrame);
-		imshow("ROI", ROIframe);
+		//imshow("ROI", ROIframe);
 		setMouseCallback(appNom, onMouse, NULL);
 
 		switch (waitKey(5))
@@ -218,7 +219,9 @@ void _stream(Recognizer *obj)
 					obj->ROI = frame(obj->cropRect);
 				}
 				else
+				{
 					frame.copyTo(obj->ROI);
+				}
 
 				started = obj->started;		
 			m.unlock();
@@ -304,12 +307,15 @@ void  _mask(Recognizer *obj)
 
 void _overlay(Recognizer *obj)
 {
-	Mat frame, overlayFrame;
+	Mat frame, overlayFrame, contouredMaskedFrame;
 	bool started = false;
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0;
+	Rect cropRect;
 
 	m.lock();
 		obj->frame.copyTo(frame);
+		obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
+		cropRect = obj->cropRect;
 		started = obj->started;
 	m.unlock();
 
@@ -322,26 +328,29 @@ void _overlay(Recognizer *obj)
 
 		frame.copyTo(overlayFrame);
 
+		if (cropRect.width > 0 && cropRect.height > 0)
+		{
+			Mat destROI = overlayFrame(cropRect);
+			contouredMaskedFrame.copyTo(destROI);
+		}
+
+
 		rectangle(overlayFrame, Point((0 - ovrlyThick * 2), (0 - ovrlyThick)), Point((frameWidth + ovrlyThick * 2), frameHeight), ovrlyColor, ovrlyThick * 3, 8);
 		addWeighted(frame, ovrlyAlpha, overlayFrame, 1 - ovrlyAlpha, 0, overlayFrame);
 		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "w : " + to_string(abs(rc.P1.x - rc.P2.x)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "h : " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 100, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
-
-		m.lock();
-			rectangle(overlayFrame, rc.cropRect, Scalar(0, 255, 0), 1, 8, 0);
+		m.lock();			
 			overlayFrame.copyTo(obj->overlyFrame);
 
-			if (masked)
-				obj->contouredMaskedFrame.copyTo(frame);
-			else
-				obj->contouredFrame.copyTo(frame);
+			obj->frame.copyTo(frame);
+			obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
 
+			cropRect = obj->cropRect;
 			started = obj->started;
 			nrObjects = obj->nrObjects;
 			nrContours = obj->contours.size();
@@ -376,10 +385,10 @@ void _contours(Recognizer *obj)
 		{
 			if (contourArea(contours[i]) > minContourArea)
 			{
-				//bigContours.push_back(contours[i]);
 				m.lock();
+			
 					drawContours(obj->contouredMaskedFrame, contours, i, contourColor);
-					drawContours(obj->contouredFrame, contours, i, contourColor);
+
 				m.unlock();
 			}
 		}

@@ -12,7 +12,7 @@ using namespace std;
 const char* appNom = "Znakovni jezik v0.3.100.5";
 
 string infoText, oldinfoText;
-string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-capture]";
+string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
@@ -24,7 +24,6 @@ Scalar contourColor = Scalar(0, 255, 150);
 
 Recognizer rc;
 Mat displayFrame = imread("starting.jpg", CV_LOAD_IMAGE_ANYCOLOR), saveFrame;
-Point P1(0, 0), P2(0, 0);
 
 mutex m;
 thread strmThread, maskThread, overlayThread, contourThread, recognizeThread;
@@ -128,11 +127,11 @@ int main(int, char**)
 				{
 					namedWindow("Postavke", CV_WINDOW_AUTOSIZE);
 					createTrackbar("Blur", "Postavke", &blurKernel, 150, NULL);
-					createTrackbar("Hsv min.", "Postavke", &minHsv, 255, NULL);
-					createTrackbar("Hsv max.", "Postavke", &maxHsv, 255, NULL);
-					createTrackbar("C. thr.", "Postavke", &contourThresh, 200, NULL);
-					createTrackbar("C. min. ar.", "Postavke", &minContourArea, 50000, NULL);
-					createTrackbar("C. min.", "Postavke", &maxNrContours, 20, NULL);
+					createTrackbar("Hmin.", "Postavke", &minHsv, 255, NULL);
+					createTrackbar("Hmax.", "Postavke", &maxHsv, 255, NULL);
+					createTrackbar("Cthr.", "Postavke", &contourThresh, 200, NULL);
+					createTrackbar("Carea", "Postavke", &minContourArea, 50000, NULL);
+					createTrackbar("Cmin.", "Postavke", &maxNrContours, 20, NULL);
 				}
 				else
 				{
@@ -319,8 +318,8 @@ void _overlay(Recognizer *obj)
 		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "w : " + to_string(abs(P1.x - P2.x)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "h : " + to_string(abs(P1.y - P2.y)), Point(frameWidth - 100, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "w : " + to_string(abs(rc.P1.x - rc.P2.x)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "h : " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 100, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
 
@@ -441,50 +440,49 @@ void checkBoundary(Mat img)
 {
 	m.lock();
 
-	if (rc.cropRect.width>img.cols - rc.cropRect.x)
-		rc.cropRect.width = img.cols - rc.cropRect.x;
+		if (rc.cropRect.width>img.cols - rc.cropRect.x)
+			rc.cropRect.width = img.cols - rc.cropRect.x;
 
-	if (rc.cropRect.height>img.rows - rc.cropRect.y)
-		rc.cropRect.height = img.rows - rc.cropRect.y;
+		if (rc.cropRect.height>img.rows - rc.cropRect.y)
+			rc.cropRect.height = img.rows - rc.cropRect.y;
 
-	if (rc.cropRect.x<0)
-		rc.cropRect.x = 0;
+		if (rc.cropRect.x<0)
+			rc.cropRect.x = 0;
 
-	if (rc.cropRect.y<0)
-		rc.cropRect.height = 0;
+		if (rc.cropRect.y<0)
+			rc.cropRect.height = 0;
 
 	m.unlock();
 }
 
 void onMouse(int event, int x, int y, int f, void*)
 {
-	switch (event){
+	switch (event)
+	{
+		case  CV_EVENT_LBUTTONDOWN:
+			clicked = true;
 
-	case  CV_EVENT_LBUTTONDOWN:
-		clicked = true;
-
-		P1.x = x;
-		P1.y = y;
-		P2.x = x;
-		P2.y = y;
+			rc.P1.x = x;
+			rc.P1.y = y;
+			rc.P2.x = x;
+			rc.P2.y = y;
 		break;
 
-	case  CV_EVENT_LBUTTONUP:
-		P2.x = x;
-		P2.y = y;
-		clicked = false;
+		case  CV_EVENT_LBUTTONUP:
+			rc.P2.x = x;
+			rc.P2.y = y;
+			clicked = false;
 		break;
 
-	case  CV_EVENT_MOUSEMOVE:
-		if (clicked){
-			P2.x = x;
-			P2.y = y;
-		}
+		case  CV_EVENT_MOUSEMOVE:
+			if (clicked)
+			{
+				rc.P2.x = x;
+				rc.P2.y = y;
+			}
 		break;
 
-	default:   break;
-
-
+		default:   break;
 	}
 
 
@@ -492,23 +490,27 @@ void onMouse(int event, int x, int y, int f, void*)
 	{
 		m.lock();
 
-		if (P1.x>P2.x){
-			rc.cropRect.x = P2.x;
-			rc.cropRect.width = P1.x - P2.x;
-		}
-		else {
-			rc.cropRect.x = P1.x;
-			rc.cropRect.width = P2.x - P1.x;
-		}
+			if (rc.P1.x>rc.P2.x)
+			{
+				rc.cropRect.x = rc.P2.x;
+				rc.cropRect.width = rc.P1.x - rc.P2.x;
+			}
+			else
+			{
+				rc.cropRect.x = rc.P1.x;
+				rc.cropRect.width = rc.P2.x - rc.P1.x;
+			}
 
-		if (P1.y>P2.y){
-			rc.cropRect.y = P2.y;
-			rc.cropRect.height = P1.y - P2.y;
-		}
-		else {
-			rc.cropRect.y = P1.y;
-			rc.cropRect.height = P2.y - P1.y;
-		}
+			if (rc.P1.y>rc.P2.y)
+			{
+				rc.cropRect.y = rc.P2.y;
+				rc.cropRect.height = rc.P1.y - rc.P2.y;
+			}
+			else
+			{
+				rc.cropRect.y = rc.P1.y;
+				rc.cropRect.height = rc.P2.y - rc.P1.y;
+			}
 
 		m.unlock();
 	}

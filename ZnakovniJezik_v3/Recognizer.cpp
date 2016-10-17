@@ -10,6 +10,8 @@ Recognizer::Recognizer()
 	nrObjects = 0;
 	started = false;
 	cropRect = cv::Rect(0, 0, 0, 0);
+	P1 = cv::Point(0, 0);
+	P2 = cv::Point(0, 0);
 	start();
 }
 

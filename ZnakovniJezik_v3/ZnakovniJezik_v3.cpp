@@ -35,7 +35,6 @@ void _contours(Recognizer *obj);
 void _recognize(Recognizer *obj);
 
 void onMouse(int event, int x, int y, int f, void*);
-void checkBoundary(Mat img);
 
 void setInfo(string info, int what = 0);
 
@@ -212,12 +211,15 @@ void _stream(Recognizer *obj)
 			m.lock();
 				frame.copyTo(obj->frame);
 				frame.copyTo(obj->contouredFrame);
-				if (obj->cropRect.width>5 && obj->cropRect.height>5)
-					obj->ROI = frame(obj->cropRect);
-				else
+
+
+				if (obj->cropRect.width > 0 && obj->cropRect.height > 0)
 				{
-					frame.copyTo(obj->ROI);
+					obj->ROI = frame(obj->cropRect);
 				}
+				else
+					frame.copyTo(obj->ROI);
+
 				started = obj->started;		
 			m.unlock();
 		}
@@ -241,7 +243,7 @@ void  _mask(Recognizer *obj)
 	Vec3b cblack = Vec3b::all(0);
 
 	m.lock();
-		obj->frame.copyTo(frame);
+		obj->ROI.copyTo(frame);
 		contours = obj->contours;
 		started = obj->started;
 	m.unlock();
@@ -291,7 +293,7 @@ void  _mask(Recognizer *obj)
 		m.lock();
 			maskedFrame.copyTo(obj->maskedFrame);
 			maskedFrame.copyTo(obj->contouredMaskedFrame);
-			obj->frame.copyTo(frame);
+			obj->ROI.copyTo(frame);
 			obj->fps = fps;
 			contours = obj->contours;
 			started = obj->started;
@@ -444,82 +446,63 @@ void  _recognize(Recognizer *obj)
 	return;
 }
 
-void checkBoundary(Mat img)
+void onMouse(int event, int x, int y, int f, void*)
 {
 	m.lock();
 
-		if (rc.cropRect.width>img.cols - rc.cropRect.x)
-			rc.cropRect.width = img.cols - rc.cropRect.x;
+		x = x < 0 ? 0 : x;
+		x = x > rc.frame.cols ? rc.frame.cols : x;
+		y = y < 0 ? 0 : y;
+		y = y > rc.frame.rows ? rc.frame.rows : y;
 
-		if (rc.cropRect.height>img.rows - rc.cropRect.y)
-			rc.cropRect.height = img.rows - rc.cropRect.y;
+		switch (event)
+		{
+			case  CV_EVENT_LBUTTONDOWN:
+				clicked = true;
 
-		if (rc.cropRect.x<0)
-			rc.cropRect.x = 0;
 
-		if (rc.cropRect.y<0)
-			rc.cropRect.height = 0;
-
-	m.unlock();
-}
-
-void onMouse(int event, int x, int y, int f, void*)
-{
-	switch (event)
-	{
-		case  CV_EVENT_LBUTTONDOWN:
-			clicked = true;
-
-			rc.P1.x = x;
-			rc.P1.y = y;
-			rc.P2.x = x;
-			rc.P2.y = y;
-		break;
-
-		case  CV_EVENT_LBUTTONUP:
-			rc.P2.x = x;
-			rc.P2.y = y;
-			clicked = false;
-		break;
-
-		case  CV_EVENT_MOUSEMOVE:
-			if (clicked)
-			{
+				rc.P1.x = x;
+				rc.P1.y = y;
 				rc.P2.x = x;
 				rc.P2.y = y;
-			}
-		break;
+			break;
 
-		default:   break;
-	}
+			case  CV_EVENT_LBUTTONUP:
+				rc.P2.x = x;
+				rc.P2.y = y;
+				clicked = false;
+			break;
+
+			case  CV_EVENT_MOUSEMOVE:
+				if (clicked)
+				{
+					rc.P2.x = x;
+					rc.P2.y = y;
+				}
+			break;
+
+			default:   break;
+		}
 
 
-	if (clicked)
-	{
-		m.lock();
+		if (clicked)
+		{
 
-			if (rc.P1.x>rc.P2.x)
-			{
-				rc.cropRect.x = rc.P2.x;
-				rc.cropRect.width = rc.P1.x - rc.P2.x;
-			}
-			else
-			{
-				rc.cropRect.x = rc.P1.x;
-				rc.cropRect.width = rc.P2.x - rc.P1.x;
-			}
+				if (rc.P1.x>rc.P2.x)
+					rc.cropRect.x = rc.P2.x;
+				else
+					rc.cropRect.x = rc.P1.x;
 
-			if (rc.P1.y>rc.P2.y)
-			{
-				rc.cropRect.y = rc.P2.y;
-				rc.cropRect.height = rc.P1.y - rc.P2.y;
-			}
-			else
-			{
-				rc.cropRect.y = rc.P1.y;
-				rc.cropRect.height = rc.P2.y - rc.P1.y;
-			}
+				rc.cropRect.width = abs(rc.P1.x - rc.P2.x);
 
-		m.unlock();
-	}
+				if (rc.P1.y>rc.P2.y)
+					rc.cropRect.y = rc.P2.y;
+				else
+					rc.cropRect.y = rc.P1.y;
+
+				rc.cropRect.height = abs(rc.P1.y - rc.P2.y);
+
+		}
+
+	m.unlock();
 }

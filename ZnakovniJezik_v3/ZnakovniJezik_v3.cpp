@@ -349,7 +349,7 @@ void _overlay(Recognizer *obj)
 		putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 150, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 152, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 191, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 191, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 186, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 
 
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);

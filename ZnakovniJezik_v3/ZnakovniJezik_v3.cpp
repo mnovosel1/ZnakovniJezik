@@ -100,7 +100,7 @@ int main(int, char**)
 			case 99:
 				slikaIme = to_string(++brSlike);
 				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = "img\\" + slikaIme + ".jpg";
+				slikaIme = "img\\" + slikaIme + ".bmp";
 				
 				m.lock();
 					if (rc.cropRect.width>0 && rc.cropRect.height>0)

@@ -308,9 +308,10 @@ void  _mask(Recognizer *obj)
 void _overlay(Recognizer *obj)
 {
 	Mat frame, overlayFrame, contouredMaskedFrame;
-	bool started = false;
+	bool started = false, recognizeOn = false;
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0;
 	Rect cropRect;
+	string recognizeOnText;
 
 	m.lock();
 		obj->frame.copyTo(frame);
@@ -340,10 +341,17 @@ void _overlay(Recognizer *obj)
 		rectangle(overlayFrame, Point((0 - ovrlyThick * 2), (0 - ovrlyThick)), Point((frameWidth + ovrlyThick * 2), frameHeight), ovrlyColor, ovrlyThick * 3, 8);
 		addWeighted(frame, ovrlyAlpha, overlayFrame, 1 - ovrlyAlpha, 0, overlayFrame);
 		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 220, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+
+		if (recognizeOn) recognizeOnText = "Prepoznavanje u tijeku..";
+		else recognizeOnText = "ROI nije odabran.";
+		putText(overlayFrame, recognizeOnText, Point(frameWidth - 190, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+
+		putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 150, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 152, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 191, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 191, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+
+
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
 		m.lock();			
@@ -357,6 +365,7 @@ void _overlay(Recognizer *obj)
 			nrObjects = obj->nrObjects;
 			nrContours = obj->contours.size();
 			fps = obj->fps;
+			recognizeOn = obj->recognizeOn;
 		m.unlock();
 	}
 	return;
@@ -410,9 +419,10 @@ void  _recognize(Recognizer *obj)
 	string haarXML, haarName;
 	CascadeClassifier cascade;
 	vector<Rect> hands;
+	Rect cropRect;
 	int nrObjects = 0;
 
-	bool started = false;
+	bool started = false, recognizeOn = false;
 
 	WIN32_FIND_DATA data;
 	HANDLE hFind;
@@ -426,7 +436,18 @@ void  _recognize(Recognizer *obj)
 			obj->maskedFrame.copyTo(frame);
 			started = obj->started;
 			obj->nrObjects = nrObjects;
+
+			cropRect = obj->cropRect;
+			obj->recognizeOn = recognizeOn;
 		m.unlock();
+
+		if (cropRect.width < 40 || cropRect.height < 40)
+		{
+			recognizeOn = false;
+			continue;
+		}
+
+		recognizeOn = true;
 
 		hFind = FindFirstFile("haarcascades/*.*", &data);
 		do {
@@ -447,13 +468,13 @@ void  _recognize(Recognizer *obj)
 				}
 			}
 		} while (FindNextFile(hFind, &data));
+		FindClose(hFind);
 
 		Sleep(2000);
 		setInfo("");
 
 	} while (started);
 
-	FindClose(hFind);
 	return;
 }
 

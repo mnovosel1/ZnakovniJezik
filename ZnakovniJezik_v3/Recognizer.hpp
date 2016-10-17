@@ -6,7 +6,7 @@ public:
 	std::vector<std::vector<cv::Point>> contours;
 	cv::Rect cropRect;
 	cv::Point P1, P2;
-	bool started;
+	bool started, recognizeOn;
 	int fps, nrObjects;
 
 public:

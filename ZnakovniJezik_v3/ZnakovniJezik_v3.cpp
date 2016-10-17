@@ -77,7 +77,6 @@ int main(int, char**)
 			if (overlayed)
 			{
 				rc.overlyFrame.copyTo(displayFrame);
-				rectangle(displayFrame, rc.cropRect, contourColor, 2);
 			}
 			else
 				rc.frame.copyTo(displayFrame);
@@ -110,7 +109,7 @@ int main(int, char**)
 						saveFrame = rc.frame;
 				m.unlock();
 
-				resize(saveFrame, saveFrame, Size((int)saveFrame.cols/4, (int)saveFrame.rows/4));
+				resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
 				imwrite(slikaIme, saveFrame);
 
 				setInfo(slikaIme + "\n", 1);
@@ -331,6 +330,8 @@ void _overlay(Recognizer *obj)
 
 		if (cropRect.width > 0 && cropRect.height > 0)
 		{
+			rectangle(overlayFrame, cropRect, ovrlyColor, 3);
+
 			Mat destROI = overlayFrame(cropRect);
 			contouredMaskedFrame.copyTo(destROI);
 		}
@@ -339,10 +340,10 @@ void _overlay(Recognizer *obj)
 		rectangle(overlayFrame, Point((0 - ovrlyThick * 2), (0 - ovrlyThick)), Point((frameWidth + ovrlyThick * 2), frameHeight), ovrlyColor, ovrlyThick * 3, 8);
 		addWeighted(frame, ovrlyAlpha, overlayFrame, 1 - ovrlyAlpha, 0, overlayFrame);
 		putText(overlayFrame, topText, Point(5, 15), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 220, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 75, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 105, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 100, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 100, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
 		m.lock();			

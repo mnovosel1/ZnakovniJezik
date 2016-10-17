@@ -12,7 +12,7 @@ using namespace std;
 const char* appNom = "Znakovni jezik v0.3.103";
 
 string infoText, oldinfoText;
-string slikaIme, topText = "[ESC-izlaz] [O-overlay] [M-mask] [P-postavke] [C-slikaj]";
+string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
@@ -75,11 +75,12 @@ int main(int, char**)
 	{
 		m.lock();
 			if (overlayed)
+			{
 				rc.overlyFrame.copyTo(displayFrame);
-			else if (masked)
-				rc.maskedFrame.copyTo(displayFrame);
+				rectangle(displayFrame, rc.cropRect, contourColor, 2);
+			}
 			else
-				rc.contouredFrame.copyTo(displayFrame);
+				rc.frame.copyTo(displayFrame);
 
 			rc.maskedFrame.copyTo(ROIframe);
 		m.unlock();
@@ -102,7 +103,14 @@ int main(int, char**)
 				slikaIme = slikaIme.substr(1, 6);
 				slikaIme = "img\\" + slikaIme + ".jpg";
 				
-				resize(rc.frame, saveFrame, Size(80, 60));
+				m.lock();
+					if (rc.cropRect.width>0 && rc.cropRect.height>0)
+						saveFrame = rc.frame(rc.cropRect);
+					else
+						saveFrame = rc.frame;
+				m.unlock();
+
+				resize(saveFrame, saveFrame, Size((int)saveFrame.cols/4, (int)saveFrame.rows/4));
 				imwrite(slikaIme, saveFrame);
 
 				setInfo(slikaIme + "\n", 1);
@@ -112,12 +120,6 @@ int main(int, char**)
 			case 79:
 			case 111:
 				overlayed = !overlayed;
-			break;
-
-			// M
-			case 77:
-			case 109:
-				masked = !masked;
 			break;
 
 			// P
@@ -212,7 +214,6 @@ void _stream(Recognizer *obj)
 			m.lock();
 				frame.copyTo(obj->frame);
 				frame.copyTo(obj->contouredFrame);
-
 
 				if (obj->cropRect.width > 0 && obj->cropRect.height > 0)
 				{
@@ -510,7 +511,6 @@ void onMouse(int event, int x, int y, int f, void*)
 					rc.cropRect.y = rc.P1.y;
 
 				rc.cropRect.height = abs(rc.P1.y - rc.P2.y);
-
 		}
 
 	m.unlock();

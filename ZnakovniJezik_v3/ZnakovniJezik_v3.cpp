@@ -16,7 +16,7 @@ string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 20, minContourArea = 20000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -41,15 +41,20 @@ void setInfo(string info, int what = 0);
 int main(int, char**)
 {
 	strmThread = thread(_stream, &rc);
+
 	setInfo("\n", 1);
 	Sleep(400);
 
-	do 	{
-		Sleep(50);
+	do 	
+	{
+		Sleep(500);
+
 		m.lock();
 			started = rc.started;
 		m.unlock();
+
 	} while (!started);
+
 	setInfo("Streamer pokrenut..\n", 1);
 
 	Sleep(200);
@@ -310,13 +315,14 @@ void _overlay(Recognizer *obj)
 	Mat frame, overlayFrame, contouredMaskedFrame;
 	bool started = false, recognizeOn = false;
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0;
-	Rect cropRect;
+	Rect cropRect, hand, rLabel;
 	string recognizeOnText;
 
 	m.lock();
 		obj->frame.copyTo(frame);
 		obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
 		cropRect = obj->cropRect;
+		hand = obj->hand;
 		started = obj->started;
 	m.unlock();
 
@@ -331,7 +337,7 @@ void _overlay(Recognizer *obj)
 
 		if (cropRect.width > 0 && cropRect.height > 0)
 		{
-			rectangle(overlayFrame, cropRect, ovrlyColor, 3);
+			rectangle(overlayFrame, cropRect, Scalar(0,0,255), 4);
 
 			Mat destROI = overlayFrame(cropRect);
 			contouredMaskedFrame.copyTo(destROI);
@@ -351,6 +357,14 @@ void _overlay(Recognizer *obj)
 		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 191, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 186, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 
+		hand.x += cropRect.x;
+		hand.y += cropRect.y;
+
+		if (hand.height > 40 && hand.x + hand.width <= cropRect.x + cropRect.width && hand.y + hand.height <= cropRect.y + cropRect.height)
+		{
+			rectangle(overlayFrame, hand, Scalar(255, 255, 255), 1);
+			putText(overlayFrame, "A", Point(hand.x + 3, hand.y + hand.height - 7), FONT_HERSHEY_DUPLEX, 1.1, txtColor);
+		}
 
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
@@ -361,9 +375,10 @@ void _overlay(Recognizer *obj)
 			obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
 
 			cropRect = obj->cropRect;
+			hand = obj->hand;
 			started = obj->started;
 			nrObjects = obj->nrObjects;
-			nrContours = obj->contours.size();
+			nrContours = obj->nrContours;
 			fps = obj->fps;
 			recognizeOn = obj->recognizeOn;
 		m.unlock();
@@ -391,15 +406,19 @@ void _contours(Recognizer *obj)
 		//Canny(canny_output, canny_output, contourThresh, contourThresh * 2, 3);
 		findContours(canny_output, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-		bigContours.clear();
 		for (int i = 0; i < contours.size(); i++)
 		{
 			if (contourArea(contours[i]) > minContourArea)
 			{
-				m.lock();
-			
+				m.lock();					
+					obj->nrContours += 40;
 					drawContours(obj->contouredMaskedFrame, contours, i, contourColor);
-
+				m.unlock();
+			}
+			else
+			{
+				m.lock();
+					obj->nrContours = obj->nrContours <= 0 ? 0 : obj->nrContours-1;
 				m.unlock();
 			}
 		}
@@ -441,6 +460,7 @@ void  _recognize(Recognizer *obj)
 			obj->recognizeOn = recognizeOn;
 		m.unlock();
 
+
 		if (cropRect.width < 40 || cropRect.height < 40)
 		{
 			recognizeOn = false;
@@ -454,24 +474,33 @@ void  _recognize(Recognizer *obj)
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 			{
 				haarXML = data.cFileName;
-				size_t lastindex = haarXML.find_last_of(".");
-				haarName = haarXML.substr(0, lastindex);
+				size_t index = haarXML.find_first_of("_");
+				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(150, 150), Size(700, 700));
+				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(200, 200), Size(700, 700));
 
-				if (hands.size() > 0)
-				{
-					nrObjects++;
-					setInfo(haarName + " ");
-					Sleep(50);
-				}
+				m.lock();
+					if (obj->nrContours>0 && hands.size() > 0)
+					{
+						obj->nrObjects++;
+						setInfo(haarName + " ");
+						for each (Rect hand in hands)
+						{
+							obj->hand = hand;
+						}
+					}
+				m.unlock();
+				
+				Sleep(500);
+
+				m.lock();
+					setInfo("");
+					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
+				m.unlock();
 			}
 		} while (FindNextFile(hFind, &data));
 		FindClose(hFind);
-
-		Sleep(2000);
-		setInfo("");
 
 	} while (started);
 

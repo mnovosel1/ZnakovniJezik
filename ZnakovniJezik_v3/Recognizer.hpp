@@ -7,7 +7,8 @@ public:
 	cv::Rect cropRect, hand;
 	cv::Point P1, P2;
 	bool started, recognizeOn;
-	int fps, nrContours, nrObjects;
+	int fps, nrContours, nrObjects, recCounter;
+	std::string slovo;
 
 public:
 	Recognizer();

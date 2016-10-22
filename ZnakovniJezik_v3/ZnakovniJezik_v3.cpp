@@ -314,15 +314,17 @@ void _overlay(Recognizer *obj)
 {
 	Mat frame, overlayFrame, contouredMaskedFrame;
 	bool started = false, recognizeOn = false;
-	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0;
+	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0, recCounter;
 	Rect cropRect, hand, rLabel;
-	string recognizeOnText;
+	string recognizeOnText, slovo;
 
 	m.lock();
 		obj->frame.copyTo(frame);
 		obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
 		cropRect = obj->cropRect;
 		hand = obj->hand;
+		slovo = obj->slovo;
+		recCounter = obj->recCounter;
 		started = obj->started;
 	m.unlock();
 
@@ -360,10 +362,10 @@ void _overlay(Recognizer *obj)
 		hand.x += cropRect.x;
 		hand.y += cropRect.y;
 
-		if (hand.height > 40 && hand.x + hand.width <= cropRect.x + cropRect.width && hand.y + hand.height <= cropRect.y + cropRect.height)
+		if (recCounter > 0 && hand.height > 40 && hand.x + hand.width <= cropRect.x + cropRect.width && hand.y + hand.height <= cropRect.y + cropRect.height)
 		{
 			rectangle(overlayFrame, hand, Scalar(255, 255, 255), 1);
-			putText(overlayFrame, "A", Point(hand.x + 3, hand.y + hand.height - 7), FONT_HERSHEY_DUPLEX, 1.1, txtColor);
+			putText(overlayFrame, slovo, Point(hand.x + 3, hand.y + hand.height - 7), FONT_HERSHEY_DUPLEX, 1.1, txtColor);
 		}
 
 		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
@@ -376,6 +378,8 @@ void _overlay(Recognizer *obj)
 
 			cropRect = obj->cropRect;
 			hand = obj->hand;
+			slovo = obj->slovo;
+			recCounter = obj->recCounter;
 			started = obj->started;
 			nrObjects = obj->nrObjects;
 			nrContours = obj->nrContours;
@@ -478,23 +482,24 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size(200, 200), Size(700, 700));
+				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size((int)cropRect.width / 2 + 20, (int)cropRect.height / 2 + 20), Size((int)cropRect.width + 20, (int)cropRect.height + 20));
 
 				m.lock();
-					if (obj->nrContours>0 && hands.size() > 0)
+				if (obj->nrContours>0 && hands.size() > 0)
+				{
+					obj->nrObjects++;
+					setInfo(haarName + " ");
+					for each (Rect hand in hands)
 					{
-						obj->nrObjects++;
-						setInfo(haarName + " ");
-						for each (Rect hand in hands)
-						{
-							obj->hand = hand;
-						}
+						obj->hand = hand;
+						obj->slovo = haarName;
+						obj->recCounter = 10;
+						break;
 					}
-				m.unlock();
-				
-				Sleep(500);
+				}
+				else
+					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter - 1;
 
-				m.lock();
 					setInfo("");
 					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
 				m.unlock();

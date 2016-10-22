@@ -14,6 +14,8 @@ Recognizer::Recognizer()
 	hand = cv::Rect(0, 0, 0, 0);
 	P1 = cv::Point(0, 0);
 	P2 = cv::Point(0, 0);
+	slovo = "";
+	recCounter = 0;
 	start();
 }
 

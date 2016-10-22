@@ -114,7 +114,8 @@ int main(int, char**)
 						saveFrame = rc.frame;
 				m.unlock();
 
-				resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
+				//resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
+				//cvtColor(saveFrame, saveFrame, CV_BGR2GRAY);
 				imwrite(slikaIme, saveFrame);
 
 				setInfo(slikaIme + "\n", 1);

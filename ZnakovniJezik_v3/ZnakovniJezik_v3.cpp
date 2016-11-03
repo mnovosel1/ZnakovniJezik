@@ -9,14 +9,14 @@
 using namespace cv;
 using namespace std;
 
-const char* appNom = "Znakovni jezik v0.6.103";
+const char* appNom = "Znakovni jezik v0.6.153";
 
 string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=7, recWeight=1;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=4, recWeight=1;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -381,7 +381,7 @@ void _overlay(Recognizer *obj)
 				if (obj->letters[i].votes > 0)
 				{
 					if (i == 0) curLetter = obj->letters[i].name;
-					putText(overlayFrame, obj->letters[i].xmlName + ": " + to_string(obj->letters[i].votes), Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
+					putText(overlayFrame, to_string(i + 1) + ". " + obj->letters[i].xmlName + " (" + to_string(obj->letters[i].votes) + ")", Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
 				}
 				else if (i == 0) curLetter = " ";
 			}
@@ -503,7 +503,7 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.2, 3, 0 | CV_HAAR_SCALE_IMAGE, Size((int)cropRect.width / 2 + 20, (int)cropRect.height / 2 + 20), Size((int)cropRect.width + 20, (int)cropRect.height + 20));
+				cascade.detectMultiScale(frame, hands, 1.2, 9, 0 | CV_HAAR_SCALE_IMAGE, Size((int)cropRect.width / 2 + 20, (int)cropRect.height / 2 + 20), Size((int)cropRect.width + 20, (int)cropRect.height + 20));
 
 				m.lock();
 				if (obj->nrContours>0 && hands.size() > 0)
@@ -521,7 +521,11 @@ void  _recognize(Recognizer *obj)
 				{
 					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter-1;
 					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
-					obj->updateLetters(data.cFileName, haarName, -1);
+
+					if (obj->recCounter < 5)
+						obj->updateLetters(data.cFileName, haarName, -2);
+					else
+						obj->updateLetters(data.cFileName, haarName, -1);
 				}
 				m.unlock();
 			}

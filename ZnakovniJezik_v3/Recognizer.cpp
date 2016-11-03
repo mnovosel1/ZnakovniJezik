@@ -36,3 +36,29 @@ void Recognizer::stop()
 Recognizer::~Recognizer()
 {
 }
+
+void Recognizer::updateLetters(std::string lName, int lVote)
+{
+	bool ltrExist = false;
+
+	for (std::vector<Letter>::size_type i = 0; i != letters.size(); i++)
+	{
+		if (letters[i].name == lName)
+		{
+			ltrExist = true;
+			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : letters[i].votes + lVote;
+		}
+	}
+
+	if (!ltrExist)
+	{
+		letters.push_back(Letter(lName, lVote));
+	}
+
+	//sort(letters.begin(), letters.end(), &Recognizer::sortLetters);
+}
+
+bool Recognizer::sortLetters(const Letter &lhs, const Letter &rhs)
+{
+	return lhs.votes > rhs.votes;
+}

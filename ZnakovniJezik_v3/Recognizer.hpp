@@ -2,13 +2,14 @@
 
 struct Letter
 {
-	std::string name;
+	std::string name, xmlName;
 	int votes;
 
-	Letter(std::string n, int v)
+	Letter(std::string& xn, std::string& n, int v) : xmlName(xn), name(n), votes(v) {};
+
+	bool operator < (const Letter& ltr) const
 	{
-		name = n;
-		votes = v;
+		return votes > ltr.votes;
 	}
 };
 
@@ -28,7 +29,6 @@ public:
 	Recognizer();
 	void start();
 	void stop();
-	void updateLetters(std::string lName, int lVote);
-	bool sortLetters(const Letter &lhs, const Letter &rhs);
+	void updateLetters(std::string xmlName, std::string lName, int lVote);
 	~Recognizer();
 };

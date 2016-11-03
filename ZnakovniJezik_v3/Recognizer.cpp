@@ -37,13 +37,13 @@ Recognizer::~Recognizer()
 {
 }
 
-void Recognizer::updateLetters(std::string lName, int lVote)
+void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote)
 {
 	bool ltrExist = false;
 
 	for (std::vector<Letter>::size_type i = 0; i != letters.size(); i++)
 	{
-		if (letters[i].name == lName)
+		if (letters[i].xmlName == xmlName)
 		{
 			ltrExist = true;
 			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : letters[i].votes + lVote;
@@ -52,13 +52,10 @@ void Recognizer::updateLetters(std::string lName, int lVote)
 
 	if (!ltrExist)
 	{
-		letters.push_back(Letter(lName, lVote));
+		letters.push_back(Letter(xmlName, lName, lVote));
 	}
 
-	//sort(letters.begin(), letters.end(), &Recognizer::sortLetters);
-}
+	std::sort(letters.begin(), letters.end());
 
-bool Recognizer::sortLetters(const Letter &lhs, const Letter &rhs)
-{
-	return lhs.votes > rhs.votes;
+	slovo = letters[0].name;
 }

@@ -9,14 +9,14 @@
 using namespace cv;
 using namespace std;
 
-const char* appNom = "Znakovni jezik v0.3.103";
+const char* appNom = "Znakovni jezik v0.6.103";
 
 string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=7, recWeight=1;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -317,7 +317,7 @@ void _overlay(Recognizer *obj)
 	bool started = false, recognizeOn = false;
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0, recCounter;
 	Rect cropRect, hand, rLabel;
-	string recognizeOnText, slovo;
+	string recognizeOnText, slovo, curLetter="", lastLetter="";
 
 	m.lock();
 		obj->frame.copyTo(frame);
@@ -355,10 +355,12 @@ void _overlay(Recognizer *obj)
 		else recognizeOnText = "ROI nije odabran.";
 		putText(overlayFrame, recognizeOnText, Point(frameWidth - 190, ovrlyThick / 3), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 
-		putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 150, frameHeight - 50), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 152, frameHeight - 35), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 191, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
-		putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 186, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+
+		if (cropRect.width > 0 && cropRect.height > 0)
+			putText(overlayFrame, "ROI : " + to_string(abs(rc.P1.x - rc.P2.x)) + " x " + to_string(abs(rc.P1.y - rc.P2.y)), Point(frameWidth - 210, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		putText(overlayFrame, "fps : " + to_string(fps), Point(frameWidth - 80, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		//putText(overlayFrame, "objekata : " + to_string(nrObjects), Point(frameWidth - 191, frameHeight - 20), FONT_HERSHEY_PLAIN, 0.9, txtColor);
+		//putText(overlayFrame, "kontura : " + to_string(nrContours), Point(frameWidth - 186, frameHeight - 5), FONT_HERSHEY_PLAIN, 0.9, txtColor);
 
 		hand.x += cropRect.x;
 		hand.y += cropRect.y;
@@ -366,12 +368,30 @@ void _overlay(Recognizer *obj)
 		if (recCounter > 0 && hand.height > 40 && hand.x + hand.width <= cropRect.x + cropRect.width && hand.y + hand.height <= cropRect.y + cropRect.height)
 		{
 			rectangle(overlayFrame, hand, Scalar(255, 255, 255), 1);
-			putText(overlayFrame, slovo, Point(hand.x + 3, hand.y + hand.height - 7), FONT_HERSHEY_DUPLEX, 1.1, txtColor);
+			putText(overlayFrame, slovo, Point(hand.x + 5, hand.y + hand.height - 7), FONT_HERSHEY_DUPLEX, 1.1, txtColor);
 		}
 
-		putText(overlayFrame, infoText, Point(5, frameHeight - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
+		putText(overlayFrame, infoText, Point(8, frameHeight + 5 - ovrlyThick / 2), FONT_HERSHEY_TRIPLEX, 1.7, txtColor, 1);
 
-		m.lock();			
+		m.lock();
+			
+			int imax = obj->letters.size() > brLetersa ? brLetersa : obj->letters.size();
+			for (std::vector<Letter>::size_type i = 0; i < imax; i++)
+			{
+				if (obj->letters[i].votes > 0)
+				{
+					if (i == 0) curLetter = obj->letters[i].name;
+					putText(overlayFrame, obj->letters[i].xmlName + ": " + to_string(obj->letters[i].votes), Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
+				}
+				else if (i == 0) curLetter = " ";
+			}
+			
+			if (lastLetter != curLetter)
+			{
+				setInfo(curLetter);
+				lastLetter = curLetter;
+			}
+
 			overlayFrame.copyTo(obj->overlyFrame);
 
 			obj->frame.copyTo(frame);
@@ -489,22 +509,20 @@ void  _recognize(Recognizer *obj)
 				if (obj->nrContours>0 && hands.size() > 0)
 				{
 					obj->nrObjects++;
-					setInfo(haarName + " ");
 					for each (Rect hand in hands)
 					{
 						obj->hand = hand;
-						obj->slovo = haarName;
-						//obj->letters.push_back(pair<string, int> (haarName, 10));
-						//sort(obj->letters.begin(), obj->letters.end());
+						obj->updateLetters(data.cFileName, haarName, recWeight);
 						obj->recCounter = 10;
 						break;
 					}
 				}
 				else
-					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter - 1;
-
-					setInfo("");
+				{
+					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter-1;
 					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
+					obj->updateLetters(data.cFileName, haarName, -1);
+				}
 				m.unlock();
 			}
 		} while (FindNextFile(hFind, &data));

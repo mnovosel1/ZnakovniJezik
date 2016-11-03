@@ -4,6 +4,7 @@ class Recognizer
 public:
 	cv::Mat frame, overlyFrame, maskedFrame, contouredFrame, contouredMaskedFrame, ROI;
 	std::vector<std::vector<cv::Point>> contours;
+	std::vector<std::pair<std::string, int> >letters;
 	cv::Rect cropRect, hand;
 	cv::Point P1, P2;
 	bool started, recognizeOn;

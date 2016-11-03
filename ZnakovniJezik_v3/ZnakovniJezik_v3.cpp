@@ -494,6 +494,8 @@ void  _recognize(Recognizer *obj)
 					{
 						obj->hand = hand;
 						obj->slovo = haarName;
+						obj->letters.push_back(pair<string, int> (haarName, 10));
+						sort(obj->letters.begin(), obj->letters.end());
 						obj->recCounter = 10;
 						break;
 					}

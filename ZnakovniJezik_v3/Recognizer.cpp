@@ -15,6 +15,7 @@ Recognizer::Recognizer()
 	P1 = cv::Point(0, 0);
 	P2 = cv::Point(0, 0);
 	slovo = "";
+	currSlovo = "";
 	recCounter = 0;
 	start();
 }
@@ -39,7 +40,7 @@ Recognizer::~Recognizer()
 
 void Recognizer::updateLetters()
 {
-	int lVote = 10;
+	int lVote = 5;
 
 	for (std::vector<Letter>::size_type i = 0; i != letters.size(); i++)
 	{
@@ -56,6 +57,7 @@ void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote
 		if (letters[i].name == lName)
 		{
 			ltrExist = true;
+			currSlovo = lName;
 			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : (letters[i].votes + lVote) > 99 ? 99 : letters[i].votes + lVote;
 		}		
 	}
@@ -67,6 +69,6 @@ void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote
 
 	std::sort(letters.begin(), letters.end());
 
-	if (letters[0].votes > 20)
+	if (letters[0].votes > 30)
 		slovo = letters[0].name;
 }

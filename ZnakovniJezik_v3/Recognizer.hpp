@@ -23,7 +23,7 @@ public:
 	cv::Point P1, P2;
 	bool started, recognizeOn;
 	int fps, nrContours, nrObjects, recCounter;
-	std::string slovo;
+	std::string slovo, currSlovo;
 
 public:
 	Recognizer();

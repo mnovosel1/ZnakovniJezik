@@ -9,10 +9,10 @@
 using namespace cv;
 using namespace std;
 
-const char* appNom = "Znakovni jezik v0.6.153";
+const char* appNom = "Znakovni jezik v0.7.153";
 
 string infoText, oldinfoText;
-string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
+string slikaIme, topText = "[ESC-izlaz]  [P-postavke]  [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
@@ -120,10 +120,10 @@ int main(int, char**)
 			break;
 
 			// O
-			case 79:
-			case 111:
-				overlayed = !overlayed;
-			break;
+			//case 79:
+			//case 111:
+				//overlayed = !overlayed;
+			//break;
 
 			// P
 			case 80:
@@ -323,7 +323,7 @@ void _overlay(Recognizer *obj)
 		obj->contouredMaskedFrame.copyTo(contouredMaskedFrame);
 		cropRect = obj->cropRect;
 		hand = obj->hand;
-		slovo = obj->slovo;
+		slovo = obj->currSlovo;
 		recCounter = obj->recCounter;
 		started = obj->started;
 	m.unlock();
@@ -380,7 +380,7 @@ void _overlay(Recognizer *obj)
 				if (obj->letters[i].votes > 0)
 				{
 					if (i == 0) curLetter = obj->letters[i].name;
-					putText(overlayFrame, to_string(i + 1) + ". " + obj->letters[i].xmlName + " " + to_string(obj->letters[i].votes) + "%", Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
+					putText(overlayFrame, to_string(i + 1) + ". " + obj->letters[i].xmlName + " " + to_string(obj->letters[i].votes) + "", Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
 				}
 				else if (i == 0) curLetter = " ";
 			}
@@ -398,7 +398,7 @@ void _overlay(Recognizer *obj)
 
 			cropRect = obj->cropRect;
 			hand = obj->hand;
-			slovo = obj->slovo;
+			slovo = obj->currSlovo;
 			recCounter = obj->recCounter;
 			started = obj->started;
 			nrObjects = obj->nrObjects;
@@ -509,7 +509,7 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.1, 9, 0 | CV_HAAR_SCALE_IMAGE, Size((int)sizeFactor / 2 + 20, (int)sizeFactor / 2 + 20), Size((int)sizeFactor + 20, (int)sizeFactor + 20));
+				cascade.detectMultiScale(frame, hands, 1.1, 3, 0 | CV_HAAR_SCALE_IMAGE, Size((int)sizeFactor / 2 + 20, (int)sizeFactor / 2 + 20), Size((int)sizeFactor + 20, (int)sizeFactor + 20));
 
 				m.lock();
 				if (obj->nrContours > 0 && hands.size() > 0)

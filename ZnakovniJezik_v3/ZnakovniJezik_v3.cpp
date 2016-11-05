@@ -16,7 +16,7 @@ string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=4, recWeight=1;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=4;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -506,13 +506,13 @@ void  _recognize(Recognizer *obj)
 				cascade.detectMultiScale(frame, hands, 1.2, 9, 0 | CV_HAAR_SCALE_IMAGE, Size((int)cropRect.width / 2 + 20, (int)cropRect.height / 2 + 20), Size((int)cropRect.width + 20, (int)cropRect.height + 20));
 
 				m.lock();
-				if (obj->nrContours>0 && hands.size() > 0)
+				if (obj->nrContours > 0 && hands.size() > 0)
 				{
 					obj->nrObjects++;
 					for each (Rect hand in hands)
 					{
 						obj->hand = hand;
-						obj->updateLetters(data.cFileName, haarName, recWeight);
+						obj->updateLetters(data.cFileName, haarName, 15);
 						obj->recCounter = 10;
 						break;
 					}
@@ -522,10 +522,10 @@ void  _recognize(Recognizer *obj)
 					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter-1;
 					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
 
-					if (obj->recCounter < 5)
-						obj->updateLetters(data.cFileName, haarName, -2);
+					if (obj->nrContours < 5)
+						obj->updateLetters(data.cFileName, haarName, -30);
 					else
-						obj->updateLetters(data.cFileName, haarName, -1);
+						obj->updateLetters(data.cFileName, haarName, -10);
 				}
 				m.unlock();
 			}

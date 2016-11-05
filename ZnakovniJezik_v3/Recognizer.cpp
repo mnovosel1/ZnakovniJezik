@@ -43,10 +43,10 @@ void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote
 
 	for (std::vector<Letter>::size_type i = 0; i != letters.size(); i++)
 	{
-		if (letters[i].xmlName == xmlName)
+		if (letters[i].name == lName)
 		{
 			ltrExist = true;
-			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : (letters[i].votes + lVote) > 50 ? 50 : letters[i].votes + lVote;
+			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : (letters[i].votes + lVote) > 100 ? 100 : letters[i].votes + lVote;
 		}
 	}
 

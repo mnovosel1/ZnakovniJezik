@@ -16,7 +16,7 @@ string slikaIme, topText = "[ESC-izlaz] [O-overlay] [P-postavke] [C-slikaj]";
 
 bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 40, maxHsv = 180, blurKernel = 15, brLetersa=4;
+int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -105,18 +105,16 @@ int main(int, char**)
 			case 99:
 				slikaIme = to_string(++brSlike);
 				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = "img\\" + slikaIme + ".bmp";
+				slikaIme = "img\\" + slikaIme + ".jpg";
 				
 				m.lock();
-					if (rc.cropRect.width>0 && rc.cropRect.height>0)
-						saveFrame = rc.frame(rc.cropRect);
-					else
-						saveFrame = rc.frame;
+					saveFrame = rc.maskedFrame;
 				m.unlock();
 
 				//resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
-				//cvtColor(saveFrame, saveFrame, CV_BGR2GRAY);
-				imwrite(slikaIme, saveFrame);
+					
+				cvtColor(saveFrame, saveFrame, CV_BGR2GRAY);
+				imwrite(slikaIme, saveFrame, vector<int>({ CV_IMWRITE_JPEG_QUALITY, 100 }));
 
 				setInfo(slikaIme + "\n", 1);
 			break;
@@ -318,6 +316,7 @@ void _overlay(Recognizer *obj)
 	int frameWidth, frameHeight, fps = 0, nrObjects = 0, nrContours = 0, recCounter;
 	Rect cropRect, hand, rLabel;
 	string recognizeOnText, slovo, curLetter="", lastLetter="";
+	unsigned long begTime = clock();
 
 	m.lock();
 		obj->frame.copyTo(frame);
@@ -381,7 +380,7 @@ void _overlay(Recognizer *obj)
 				if (obj->letters[i].votes > 0)
 				{
 					if (i == 0) curLetter = obj->letters[i].name;
-					putText(overlayFrame, to_string(i + 1) + ". " + obj->letters[i].xmlName + " (" + to_string(obj->letters[i].votes) + ")", Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
+					putText(overlayFrame, to_string(i + 1) + ". " + obj->letters[i].xmlName + " " + to_string(obj->letters[i].votes) + "%", Point(frameWidth - 210, frameHeight - 55 + (i * 10)), FONT_HERSHEY_PLAIN, 0.7, txtColor);
 				}
 				else if (i == 0) curLetter = " ";
 			}
@@ -406,6 +405,12 @@ void _overlay(Recognizer *obj)
 			nrContours = obj->nrContours;
 			fps = obj->fps;
 			recognizeOn = obj->recognizeOn;
+
+			if (((unsigned long)clock() - begTime) >= 100)
+			{
+				obj->updateLetters();
+				begTime = clock();
+			}
 		m.unlock();
 	}
 	return;
@@ -464,7 +469,7 @@ void  _recognize(Recognizer *obj)
 	CascadeClassifier cascade;
 	vector<Rect> hands;
 	Rect cropRect;
-	int nrObjects = 0;
+	int sizeFactor, nrObjects = 0;
 
 	bool started = false, recognizeOn = false;
 
@@ -493,6 +498,7 @@ void  _recognize(Recognizer *obj)
 		}
 
 		recognizeOn = true;
+		sizeFactor = (cropRect.width < cropRect.height) ? cropRect.width : cropRect.height;
 
 		hFind = FindFirstFile("haarcascades/*.*", &data);
 		do {
@@ -503,7 +509,7 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.2, 9, 0 | CV_HAAR_SCALE_IMAGE, Size((int)cropRect.width / 2 + 20, (int)cropRect.height / 2 + 20), Size((int)cropRect.width + 20, (int)cropRect.height + 20));
+				cascade.detectMultiScale(frame, hands, 1.1, 9, 0 | CV_HAAR_SCALE_IMAGE, Size((int)sizeFactor / 2 + 20, (int)sizeFactor / 2 + 20), Size((int)sizeFactor + 20, (int)sizeFactor + 20));
 
 				m.lock();
 				if (obj->nrContours > 0 && hands.size() > 0)
@@ -512,8 +518,8 @@ void  _recognize(Recognizer *obj)
 					for each (Rect hand in hands)
 					{
 						obj->hand = hand;
-						obj->updateLetters(data.cFileName, haarName, 15);
 						obj->recCounter = 10;
+						obj->updateLetters(data.cFileName, haarName, 15);
 						break;
 					}
 				}
@@ -521,11 +527,6 @@ void  _recognize(Recognizer *obj)
 				{
 					obj->recCounter = obj->recCounter <= 0 ? 0 : obj->recCounter-1;
 					obj->nrObjects = obj->nrObjects <= 0 ? 0 : obj->nrObjects-1;
-
-					if (obj->nrContours < 5)
-						obj->updateLetters(data.cFileName, haarName, -30);
-					else
-						obj->updateLetters(data.cFileName, haarName, -10);
 				}
 				m.unlock();
 			}

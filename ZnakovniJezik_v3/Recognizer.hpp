@@ -29,6 +29,7 @@ public:
 	Recognizer();
 	void start();
 	void stop();
+	void updateLetters();
 	void updateLetters(std::string xmlName, std::string lName, int lVote);
 	~Recognizer();
 };

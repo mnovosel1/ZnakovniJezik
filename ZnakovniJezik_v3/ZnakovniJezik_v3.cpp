@@ -14,7 +14,9 @@ const char* appNom = "Znakovni jezik v0.7.153";
 string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz]  [P-postavke]  [C-slikaj]";
 
-bool started = false, overlayed = true, masked = false, postavke = false, clicked = false;
+bool started = false, overlayed = true, masked = false, postavke = false, clicked = false, capture = false;
+
+unsigned long capTime = clock();
 
 int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
 double ovrlyAlpha = 0.6;
@@ -93,6 +95,26 @@ int main(int, char**)
 		//imshow("ROI", ROIframe);
 		setMouseCallback(appNom, onMouse, NULL);
 
+		if ( capture && ((unsigned long)clock() - capTime) >= 1500)
+		{
+			slikaIme = to_string(++brSlike);
+			slikaIme = slikaIme.substr(1, 6);
+			slikaIme = "img\\" + slikaIme + ".jpg";
+
+			m.lock();
+			saveFrame = rc.maskedFrame;
+			m.unlock();
+
+			//resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
+
+			cvtColor(saveFrame, saveFrame, CV_BGR2GRAY);
+			imwrite(slikaIme, saveFrame, vector<int>({ CV_IMWRITE_JPEG_QUALITY, 100 }));
+
+			setInfo(slikaIme + "\n", 1);
+
+			capTime = clock();
+		}
+
 		switch (waitKey(5))
 		{
 			// ESC
@@ -102,21 +124,13 @@ int main(int, char**)
 
 			// C capture
 			case 67:
-			case 99:
-				slikaIme = to_string(++brSlike);
-				slikaIme = slikaIme.substr(1, 6);
-				slikaIme = "img\\" + slikaIme + ".jpg";
-				
-				m.lock();
-					saveFrame = rc.maskedFrame;
-				m.unlock();
+			case 99:				
+				capture = !capture;
 
-				//resize(saveFrame, saveFrame, Size((int)saveFrame.cols/8, (int)saveFrame.rows/8));
-					
-				cvtColor(saveFrame, saveFrame, CV_BGR2GRAY);
-				imwrite(slikaIme, saveFrame, vector<int>({ CV_IMWRITE_JPEG_QUALITY, 100 }));
-
-				setInfo(slikaIme + "\n", 1);
+				if (capture)
+					topText = "[ESC-izlaz]  [P-postavke]  [C-ne slikaj]";
+				else
+					topText = "[ESC-izlaz]  [P-postavke]  [C-slikaj]";
 			break;
 
 			// O

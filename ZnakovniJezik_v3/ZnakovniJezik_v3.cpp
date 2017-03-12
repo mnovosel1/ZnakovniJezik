@@ -18,7 +18,7 @@ bool started = false, overlayed = true, masked = false, postavke = false, clicke
 
 unsigned long capTime = clock();
 
-int brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
+int voteStep = 15, voteHyst = 100, brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -150,6 +150,8 @@ int main(int, char**)
 					createTrackbar("Blur", "Postavke", &blurKernel, 150, NULL);
 					createTrackbar("Hmin.", "Postavke", &minHsv, 255, NULL);
 					createTrackbar("Hmax.", "Postavke", &maxHsv, 255, NULL);
+					createTrackbar("Vstep.", "Postavke", &voteStep, 100, NULL);
+					createTrackbar("Vhyst.", "Postavke", &voteHyst, 800, NULL);
 					createTrackbar("Cthr.", "Postavke", &contourThresh, 200, NULL);
 					createTrackbar("Carea", "Postavke", &minContourArea, 50000, NULL);
 					createTrackbar("Cmin.", "Postavke", &maxNrContours, 20, NULL);
@@ -420,7 +422,7 @@ void _overlay(Recognizer *obj)
 			fps = obj->fps;
 			recognizeOn = obj->recognizeOn;
 
-			if (((unsigned long)clock() - begTime) >= 100)
+			if (((unsigned long)clock() - begTime) >= voteHyst)
 			{
 				obj->updateLetters();
 				begTime = clock();
@@ -523,7 +525,7 @@ void  _recognize(Recognizer *obj)
 				haarName = haarXML.substr(0, index);
 
 				cascade.load("haarcascades/" + haarXML);
-				cascade.detectMultiScale(frame, hands, 1.1, 3, 0 | CV_HAAR_SCALE_IMAGE, Size((int)sizeFactor / 2 + 20, (int)sizeFactor / 2 + 20), Size((int)sizeFactor + 20, (int)sizeFactor + 20));
+				cascade.detectMultiScale(frame, hands, 1.3, 3, 0 | CV_HAAR_SCALE_IMAGE, Size((int)sizeFactor / 2 + 20, (int)sizeFactor / 2 + 20), Size((int)sizeFactor + 20, (int)sizeFactor + 20));
 
 				m.lock();
 				if (obj->nrContours > 0 && hands.size() > 0)
@@ -533,8 +535,8 @@ void  _recognize(Recognizer *obj)
 					{
 						obj->hand = hand;
 						obj->recCounter = 10;
-						obj->updateLetters(data.cFileName, haarName, 15);
-						break;
+						obj->updateLetters(data.cFileName, haarName, voteStep);
+						//break;
 					}
 				}
 				else

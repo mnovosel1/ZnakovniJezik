@@ -18,7 +18,7 @@ bool started = false, overlayed = true, masked = false, postavke = false, clicke
 
 unsigned long capTime = clock();
 
-int voteStep = 15, voteHyst = 100, brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
+int voteStep = 40, voteHyst = 200, brSlike = 1000000, ovrlyThick = 45, contourThresh = 10, minContourArea = 10000, maxNrContours = 1, minHsv = 60, maxHsv = 240, blurKernel = 10, brLetersa=4;
 double ovrlyAlpha = 0.6;
 Scalar ovrlyColor = Scalar(60, 60, 0);
 Scalar txtColor = Scalar(255, 255, 255);
@@ -150,7 +150,7 @@ int main(int, char**)
 					createTrackbar("Blur", "Postavke", &blurKernel, 150, NULL);
 					createTrackbar("Hmin.", "Postavke", &minHsv, 255, NULL);
 					createTrackbar("Hmax.", "Postavke", &maxHsv, 255, NULL);
-					createTrackbar("Vstep.", "Postavke", &voteStep, 100, NULL);
+					createTrackbar("Vstep.", "Postavke", &voteStep, 99, NULL);
 					createTrackbar("Vhyst.", "Postavke", &voteHyst, 800, NULL);
 					createTrackbar("Cthr.", "Postavke", &contourThresh, 200, NULL);
 					createTrackbar("Carea", "Postavke", &minContourArea, 50000, NULL);

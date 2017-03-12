@@ -9,7 +9,7 @@
 using namespace cv;
 using namespace std;
 
-const char* appNom = "Znakovni jezik v0.7.153";
+const char* appNom = "Znakovni jezik v1.0.153";
 
 string infoText, oldinfoText;
 string slikaIme, topText = "[ESC-izlaz]  [P-postavke]  [C-slikaj]";

@@ -58,7 +58,9 @@ void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote
 		{
 			ltrExist = true;
 			currSlovo = lName;
+			lVote = lVote < 75 ? lVote : pow(1 + lVote, letters[i].votes/10);
 			letters[i].votes = (letters[i].votes + lVote) < 0 ? 0 : (letters[i].votes + lVote) > 99 ? 99 : letters[i].votes + lVote;
+			break;
 		}		
 	}
 
@@ -69,6 +71,6 @@ void Recognizer::updateLetters(std::string xmlName, std::string lName, int lVote
 
 	std::sort(letters.begin(), letters.end());
 
-	if (letters[0].votes > 30)
+	if (letters[0].votes > 50)
 		slovo = letters[0].name;
 }
